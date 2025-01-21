@@ -1,0 +1,70 @@
+:root {
+  --primary-color: #2563eb;
+  --primary-hover: #3b82f6;
+  --primary-gradient: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  --secondary-gradient: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+  --accent-gradient: linear-gradient(145deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  --button-gradient: linear-gradient(145deg, #2563eb 0%, #4f46e5 50%, #6366f1 100%);
+  --surface-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.8) 100%);
+  --glass-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.5) 100%);
+  --bg-color: #f5f7fa;
+  --text-primary: #1a1f36;
+  --text-secondary: #697386;
+  --card-shadow: 0 8px 32px rgba(79, 70, 229, 0.1);
+  --input-border: #e2e8f0;
+  --success-color: #10b981;
+  --danger-color: #ef4444;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  color: var(--text-primary);
+}
+
+/* Element Plus 全局样式覆盖 */
+:deep(.el-button--primary) {
+  background: var(--primary-gradient);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-button--primary:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+:deep(.el-input__wrapper) {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  background-color: transparent !important;
+}
+
+/* 输入框文字��色 */
+:deep(.el-input__inner) {
+  color: var(--text-primary);
+}
+
+/* 输入框占位符颜色 */
+:deep(.el-input__inner::placeholder) {
+  color: var(--text-secondary);
+} 

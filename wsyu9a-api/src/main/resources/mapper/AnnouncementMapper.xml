@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wsyu9a.mapper.AnnouncementMapper">
+    <!-- ... 原有的管理员 SQL 保持不变 -->
+
+    <!-- 统计公开的公告总数 -->
+    <select id="countPublicAnnouncements" resultType="long">
+        SELECT COUNT(*)
+        FROM announcement
+        WHERE enabled = true
+        <if test="searchKey != null and searchKey != ''">
+            AND (
+                title LIKE CONCAT('%', #{searchKey}, '%')
+                OR content LIKE CONCAT('%', #{searchKey}, '%')
+            )
+        </if>
+    </select>
+
+    <!-- 分页查询公开的公告 -->
+    <select id="findPublicByPage" resultType="com.wsyu9a.entity.Announcement">
+        SELECT *
+        FROM announcement
+        WHERE enabled = true
+        <if test="searchKey != null and searchKey != ''">
+            AND (
+                title LIKE CONCAT('%', #{searchKey}, '%')
+                OR content LIKE CONCAT('%', #{searchKey}, '%')
+            )
+        </if>
+        ORDER BY important DESC, create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <!-- 查询公开的公告详情 -->
+    <select id="findPublicById" resultType="com.wsyu9a.entity.Announcement">
+        SELECT *
+        FROM announcement
+        WHERE id = #{id} AND enabled = true
+    </select>
+</mapper> 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wsyu9a.mapper.ProblemMapper">
+    <!-- 关闭该命名空间的缓存 -->
+    <cache-ref namespace="com.wsyu9a.mapper.ProblemMapper"/>
+</mapper> 
