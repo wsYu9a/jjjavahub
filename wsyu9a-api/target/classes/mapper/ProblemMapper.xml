@@ -3,4 +3,34 @@
 <mapper namespace="com.wsyu9a.mapper.ProblemMapper">
     <!-- 关闭该命名空间的缓存 -->
     <cache-ref namespace="com.wsyu9a.mapper.ProblemMapper"/>
+
+    <insert id="insert" parameterType="com.wsyu9a.entity.Problem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO problem (
+            title, 
+            category_id, 
+            difficulty, 
+            score, 
+            flag, 
+            summary, 
+            detail,
+            docker_compose_path,
+            attachment_path,
+            enabled, 
+            create_time, 
+            update_time
+        ) VALUES (
+            #{title}, 
+            #{categoryId}, 
+            #{difficulty}, 
+            #{score}, 
+            #{flag}, 
+            #{summary}, 
+            #{detail},
+            #{dockerComposePath:VARCHAR},
+            #{attachmentPath:VARCHAR},
+            #{enabled}, 
+            #{createTime}, 
+            #{updateTime}
+        )
+    </insert>
 </mapper> 

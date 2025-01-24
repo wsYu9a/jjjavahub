@@ -9,7 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 public interface ProblemService {
-    PageResult<Problem> getProblems(Integer pageNum, Integer pageSize, String searchKey, Long categoryId);
+    PageResult<Problem> getProblems(Integer pageNum, Integer pageSize, String searchKey, Long categoryId, String difficulty);
     Problem getProblemById(Long id);
     Problem addProblem(ProblemDTO problemDTO);
     Problem updateProblem(ProblemDTO problemDTO);

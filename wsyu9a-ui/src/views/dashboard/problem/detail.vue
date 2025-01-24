@@ -65,11 +65,10 @@
                 <div class="env-status">
                   状态：
                   <el-tag 
-                    :type="envStatus === 'running' ? 'success' : 
-                          envStatus === 'starting' ? 'warning' : 'info'"
+                    :type="envStatusType"
+                    :effect="envStatus === 'stopping' ? 'dark' : 'light'"
                   >
-                    {{ envStatus === 'running' ? '运行中' :
-                       envStatus === 'starting' ? '启动中' : '未启动' }}
+                    {{ envStatusText }}
                   </el-tag>
                 </div>
               </div>
@@ -79,9 +78,9 @@
               <div class="control-group">
                 <el-button 
                   type="primary" 
-                  :loading="isStarting"
-                  :disabled="envStatus === 'running'"
-                  @click="handleStartEnv"
+                  @click="handleStartEnv" 
+                  :loading="loading"
+                  :disabled="loading"
                 >
                   <el-icon><VideoPlay /></el-icon>
                   启动环境
@@ -89,10 +88,11 @@
                 <el-button 
                   type="danger" 
                   :disabled="envStatus === 'stopped'"
+                  :loading="isStoppingEnv"
                   @click="handleStopEnv"
                 >
                   <el-icon><VideoPause /></el-icon>
-                  停止环境
+                  {{ isStoppingEnv ? '停止中' : '停止环境' }}
                 </el-button>
               </div>
 
@@ -212,7 +212,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
@@ -229,7 +229,7 @@ import {
   Download,
   CopyDocument
 } from '@element-plus/icons-vue'
-import { getUserProblemDetail, getProblemReadme } from '@/api/problem'
+import { getUserProblemDetail, getProblemReadme, startProblemEnv, stopProblemEnv, getProblemEnvStatus } from '@/api/problem'
 import { marked } from 'marked'
 import 'github-markdown-css'
 
@@ -270,6 +270,9 @@ const getReadmeContent = async (path) => {
   }
 }
 
+// 修改附件列表为空数组，等待API数据填充
+const attachments = ref([])
+
 // 获取题目详情
 const getDetail = async () => {
   loading.value = true
@@ -280,6 +283,18 @@ const getDetail = async () => {
       // 如果有 detail 字段，则获取 README 内容
       if (res.data.detail) {
         await getReadmeContent(res.data.detail)
+      }
+      
+      // 如果有附件路径，将其转换为附件对象
+      if (res.data.attachmentPath) {
+        // 假设attachmentPath是以逗号分隔的文件路径字符串
+        const paths = res.data.attachmentPath.split(',')
+        attachments.value = paths.map(path => ({
+          name: path.split('/').pop(), // 从路径中提取文件名
+          url: path // 完整的文件路径
+        }))
+      } else {
+        attachments.value = [] // 如果没有附件则设置为空数组
       }
     }
   } catch (error) {
@@ -300,51 +315,165 @@ const getDifficultyType = (difficulty) => {
   return types[difficulty] || 'info'
 }
 
-// 添加解题相关的数据
+// 修改环境相关的数据
 const envStatus = ref('stopped')
 const isStarting = ref(false)
 const isSubmitting = ref(false)
 const envUrl = ref('')
-const remainingTime = ref('29:59')
-const submitForm = ref({ flag: '' })
-const attachments = ref([
-  { name: 'writeup.pdf', url: '#' },
-  { name: 'source.zip', url: '#' }
-])
+const remainingTime = ref('')
+const timer = ref(null)
 
-// 添加解题相关的方法
-const handleStartEnv = async () => {
-  isStarting.value = true
-  envStatus.value = 'starting'
+// 计算剩余时间
+const updateRemainingTime = (endTime) => {
+  if (!endTime) return
   
+  const end = new Date(endTime).getTime()
+  const now = new Date().getTime()
+  const diff = end - now
+
+  if (diff <= 0) {
+    clearInterval(timer.value)
+    envStatus.value = 'stopped'
+    remainingTime.value = '00:00'
+    return
+  }
+
+  const minutes = Math.floor(diff / 60000)
+  const seconds = Math.floor((diff % 60000) / 1000)
+  remainingTime.value = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
+
+// 启动环境
+const handleStartEnv = async () => {
+  if (loading.value) return  // 防止重复点击
+  
+  loading.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    envStatus.value = 'running'
-    envUrl.value = 'http://challenge-1.example.com:8080'
-    ElMessage.success('环境启动成功')
+    const res = await startProblemEnv(route.params.id)
+    if (res.code === 200) {
+      ElMessage.success('环境启动成功')
+      // 更新环境状态
+      envStatus.value = 'running'
+      envUrl.value = res.data.url
+      // 开始倒计时
+      if (res.data.expireTime) {
+        updateRemainingTime(res.data.expireTime)
+        // 清除可能存在的旧定时器
+        if (timer.value) {
+          clearInterval(timer.value)
+        }
+        // 设置新的定时器
+        timer.value = setInterval(() => {
+          updateRemainingTime(res.data.expireTime)
+        }, 1000)
+      }
+      // 定期刷新环境状态
+      startStatusPolling()
+    }
   } catch (error) {
-    ElMessage.error('环境启动失败')
+    ElMessage.error(error.message || '启动环境失败')
     envStatus.value = 'stopped'
   } finally {
-    isStarting.value = false
+    loading.value = false
   }
 }
 
+// 定期刷新环境状态
+let statusPollingTimer = null
+const startStatusPolling = () => {
+  // 清除可能存在的旧定时器
+  if (statusPollingTimer) {
+    clearInterval(statusPollingTimer)
+  }
+  // 每10秒刷新一次状态
+  statusPollingTimer = setInterval(async () => {
+    // 如果正在停止中，不发起请求
+    if (envStatus.value === 'stopping') {
+      return
+    }
+    
+    try {
+      const res = await getProblemEnvStatus(route.params.id)
+      if (res.code === 200) {
+        if (res.data) {
+          envStatus.value = res.data.status
+          envUrl.value = res.data.url
+          if (res.data.expireTime) {
+            updateRemainingTime(res.data.expireTime)
+          }
+        } else {
+          // 如果返回null，说明容器已经停止
+          envStatus.value = 'stopped'
+          envUrl.value = ''
+          clearInterval(timer.value)
+          clearInterval(statusPollingTimer)
+          timer.value = null
+          statusPollingTimer = null
+        }
+      }
+    } catch (error) {
+      console.error('刷新环境状态失败:', error)
+    }
+  }, 10000)
+}
+
+// 在组件卸载时清理所有定时器
+onBeforeUnmount(() => {
+  if (timer.value) {
+    clearInterval(timer.value)
+  }
+  if (statusPollingTimer) {
+    clearInterval(statusPollingTimer)
+  }
+})
+
+// 添加停止环境的loading状态
+const isStoppingEnv = ref(false)
+
+// 修改停止环境的处理函数
 const handleStopEnv = async () => {
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    envStatus.value = 'stopped'
-    envUrl.value = ''
-    ElMessage.success('环境已停止')
+    isStoppingEnv.value = true  // 开始停止操作，显示loading
+    envStatus.value = 'stopping'  // 添加一个停止中的状态
+    
+    const res = await stopProblemEnv(route.params.id)
+    if (res.code === 200) {
+      // 停止成功后立即清理定时器，避免额外的状态检查
+      if (timer.value) {
+        clearInterval(timer.value)
+        timer.value = null
+      }
+      if (statusPollingTimer) {
+        clearInterval(statusPollingTimer)
+        statusPollingTimer = null
+      }
+      
+      envStatus.value = 'stopped'
+      envUrl.value = ''
+      remainingTime.value = '00:00'
+      ElMessage.success('环境已停止')
+    }
   } catch (error) {
-    ElMessage.error('停止环境失败')
+    envStatus.value = 'running'  // 如果停止失败，恢复为运行状态
+    ElMessage.error(error.message || '停止环境失败')
+    // 如果停止失败，重新开始状态轮询
+    startStatusPolling()
+  } finally {
+    isStoppingEnv.value = false  // 结束loading状态
   }
 }
 
-const copyUrl = () => {
-  navigator.clipboard.writeText(envUrl.value)
-  ElMessage.success('已复制到剪贴板')
-}
+// 在mounted时获取环境状态并开始轮询
+onMounted(() => {
+  getDetail()
+  getEnvStatus().then(() => {
+    if (envStatus.value === 'running') {
+      startStatusPolling()
+    }
+  })
+})
+
+const submitForm = ref({ flag: '' })
 
 const handleSubmit = async () => {
   if (!submitForm.value.flag) {
@@ -368,8 +497,31 @@ const downloadFile = (file) => {
   ElMessage.success(`开始下载：${file.name}`)
 }
 
-onMounted(() => {
-  getDetail()
+const copyUrl = () => {
+  navigator.clipboard.writeText(envUrl.value)
+  ElMessage.success('已复制到剪贴板')
+}
+
+// 修改环境状态的计算属性
+const envStatusText = computed(() => {
+  const statusMap = {
+    'running': '运行中',
+    'stopped': '未启动',
+    'starting': '启动中',
+    'stopping': '停止中'
+  }
+  return statusMap[envStatus.value] || '未知'
+})
+
+// 修改状态标签的类型
+const envStatusType = computed(() => {
+  const typeMap = {
+    'running': 'success',
+    'stopped': 'info',
+    'starting': 'warning',
+    'stopping': 'warning'
+  }
+  return typeMap[envStatus.value] || 'info'
 })
 </script>
 
@@ -776,6 +928,20 @@ onMounted(() => {
         }
       }
     }
+  }
+}
+
+// 添加停止中状态的样式
+.el-tag.el-tag--warning.el-tag--dark {
+  background-color: #e6a23c;
+  border-color: #e6a23c;
+  color: #fff;
+}
+
+// 添加按钮loading时的样式
+.el-button.is-loading {
+  .el-icon {
+    display: none;  // 在loading时隐藏图标
   }
 }
 </style> 

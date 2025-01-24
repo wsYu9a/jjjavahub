@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Layout from '@/views/admin/index.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -46,9 +47,38 @@ const router = createRouter({
         },
         {
           path: 'problem',
-          name: 'ProblemManage',
-          component: () => import('@/views/admin/problem/index.vue'),
-          meta: { requiresAuth: true, roles: ['ADMIN'] }
+          redirect: '/admin/problem/list',
+          meta: { 
+            title: '题目管理', 
+            icon: 'el-icon-document', 
+            requiresAuth: true, 
+            roles: ['ADMIN'],
+            showInMenu: true
+          },
+          children: [
+            {
+              path: 'list',
+              name: 'ProblemList',
+              component: () => import('../views/admin/problem/list.vue'),
+              meta: { 
+                title: '题目列表', 
+                requiresAuth: true, 
+                roles: ['ADMIN'],
+                showInMenu: true
+              }
+            },
+            {
+              path: 'add',
+              name: 'ProblemAdd',
+              component: () => import('../views/admin/problem/add.vue'),
+              meta: { 
+                title: '添加题目', 
+                requiresAuth: true, 
+                roles: ['ADMIN'],
+                showInMenu: true
+              }
+            }
+          ]
         },
         {
           path: 'category',
@@ -63,10 +93,27 @@ const router = createRouter({
           meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {
-          path: 'system/config',
-          name: 'SystemConfig',
-          component: () => import('@/views/admin/system/config.vue'),
-          meta: { requiresAuth: true, roles: ['ADMIN'] }
+          path: 'system',
+          meta: { title: '系统管理', icon: 'Setting' },
+          children: [
+            {
+              path: 'config',
+              name: 'SystemConfig',
+              component: () => import('@/views/admin/system/config.vue'),
+              meta: { title: '系统配置', requiresAuth: true, roles: ['ADMIN'] }
+            },
+            {
+              path: 'container',
+              name: 'ContainerManagement',
+              component: () => import('@/views/admin/system/container.vue'),
+              meta: { 
+                title: '容器管理', 
+                icon: 'Monitor', 
+                requiresAuth: true, 
+                roles: ['ADMIN']
+              }
+            }
+          ]
         }
       ]
     },
@@ -129,6 +176,20 @@ router.beforeEach(async (to, from, next) => {
         return
       }
     }
+
+    // 清除可能的路由缓存
+    if (to.matched.some(record => record.meta.clearCache)) {
+      to.matched.forEach(record => {
+        const component = record.components.default
+        if (component.name) {
+          const cache = router.options.routes.__vueCache
+          if (cache && cache[component.name]) {
+            delete cache[component.name]
+          }
+        }
+      })
+    }
+    
     next()
   } catch (error) {
     console.error('Navigation error:', error)

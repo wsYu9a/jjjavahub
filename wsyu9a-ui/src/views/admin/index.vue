@@ -15,49 +15,30 @@
           text-color="#bfcbd9"
           active-text-color="#409EFF"
         >
-          <!-- 数据统计 -->
-          <el-menu-item index="/admin">
-            <el-icon><TrendCharts /></el-icon>
-            <span>数据统计</span>
-          </el-menu-item>
-
-          <!-- 用户管理 -->
-          <el-sub-menu index="/admin/user">
-            <template #title>
-              <el-icon><User /></el-icon>
-              <span>用户管理</span>
-            </template>
-            <el-menu-item index="/admin/user">用户列表</el-menu-item>
-            <el-menu-item index="/admin/role">角色管理</el-menu-item>
-          </el-sub-menu>
-
-          <!-- 题目管理 -->
-          <el-sub-menu index="/admin/problem">
-            <template #title>
-              <el-icon><Document /></el-icon>
-              <span>题目管理</span>
-            </template>
-            <el-menu-item index="/admin/category">分类管理</el-menu-item>
-            <el-menu-item index="/admin/problem">题目列表</el-menu-item>
-          </el-sub-menu>
-
-          <!-- 公告管理 -->
-          <el-sub-menu index="/admin/announcement">
-            <template #title>
-              <el-icon><Bell /></el-icon>
-              <span>公告管理</span>
-            </template>
-            <el-menu-item index="/admin/announcement">公告列表</el-menu-item>
-          </el-sub-menu>
-
-          <!-- 系统管理 -->
-          <el-sub-menu index="/admin/system">
-            <template #title>
-              <el-icon><Setting /></el-icon>
-              <span>系统管理</span>
-            </template>
-            <el-menu-item index="/admin/system/config">Docker配置</el-menu-item>
-          </el-sub-menu>
+          <!-- 使用配置文件中的菜单项 -->
+          <template v-for="item in menuItems" :key="item.path">
+            <!-- 没有子菜单的项目 -->
+            <el-menu-item v-if="!item.children" :index="item.path">
+              <el-icon><component :is="item.icon" /></el-icon>
+              <span>{{ item.title }}</span>
+            </el-menu-item>
+            
+            <!-- 有子菜单的项目 -->
+            <el-sub-menu v-else :index="item.path">
+              <template #title>
+                <el-icon><component :is="item.icon" /></el-icon>
+                <span>{{ item.title }}</span>
+              </template>
+              <el-menu-item 
+                v-for="child in item.children" 
+                :key="child.path"
+                :index="child.path"
+              >
+                <el-icon v-if="child.icon"><component :is="child.icon" /></el-icon>
+                <span>{{ child.title }}</span>
+              </el-menu-item>
+            </el-sub-menu>
+          </template>
         </el-menu>
       </el-aside>
 
@@ -113,6 +94,7 @@
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import adminMenu from '@/config/adminMenu'
 import {
   User,
   Document,
@@ -124,13 +106,16 @@ import {
   Bell,
   Setting,
   Upload,
-  TrendCharts
+  TrendCharts,
+  Monitor,
+  Odometer
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
 const isCollapse = ref(false)
 const username = ref(localStorage.getItem('username') || '')
+const menuItems = ref(adminMenu)
 
 // 计算当前激活的菜单
 const activeMenu = computed(() => {
@@ -143,9 +128,11 @@ const menuLabels = {
   '/admin/user': '用户列表',
   '/admin/role': '角色管理',
   '/admin/category': '分类管理',
-  '/admin/problem': '题目列表',
+  '/admin/problem/list': '题目列表',
+  '/admin/problem/add': '添加题目',
   '/admin/announcement': '公告列表',
-  '/admin/system/config': '系统配置'
+  '/admin/system/config': '系统配置',
+  '/admin/system/container': '容器管理'
 }
 
 // 计算当前菜单标签

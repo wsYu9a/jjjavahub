@@ -45,9 +45,10 @@ jwt:
 
 problem:
   docker-compose:
-    upload-path: ${user.dir}/upload/docker  # 使用项目根目录下的 upload/docker 目录 
+    upload-path: ${user.dir}/upload/docker-compose  # 使用项目根目录下的 upload/docker 目录
   upload:
     readme-path: ${user.dir}/upload/readme  # 使用项目根目录下的 upload/readme 目录 
+    attachment-path: ${user.dir}/upload/fujian  # 附件上传路径
 
 # Docker配置
 docker:
@@ -55,4 +56,7 @@ docker:
     enabled: true
     default-timeout: 300
     max-containers: 50
-    auto-clean: true 
+    auto-clean: true
+  host: containerPort
+  env:
+    expire-minutes: 30  # 环境过期时间（分钟） 

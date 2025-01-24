@@ -136,12 +136,8 @@ public class ProblemServiceImpl implements ProblemService {
     }
 
     @Override
-    public PageResult<Problem> getProblems(Integer pageNum, Integer pageSize, String searchKey, Long categoryId) {
+    public PageResult<Problem> getProblems(Integer pageNum, Integer pageSize, String searchKey, Long categoryId, String difficulty) {
         try {
-            // 添加调试日志
-            log.debug("开始查询题目列表: pageNum={}, pageSize={}, searchKey={}, categoryId={}", 
-                    pageNum, pageSize, searchKey, categoryId);
-            
             // 计算偏移量
             int offset = (pageNum - 1) * pageSize;
             
@@ -149,10 +145,7 @@ public class ProblemServiceImpl implements ProblemService {
             long total = problemMapper.countProblems(searchKey, categoryId);
             
             // 获取当前页数据
-            List<Problem> problems = problemMapper.findByPage(searchKey, categoryId, offset, pageSize);
-            
-            // 添加结果日志
-            log.debug("查询到题目数量: {}, 总数: {}", problems.size(), total);
+            List<Problem> problems = problemMapper.findByPage(searchKey, categoryId, difficulty, offset, pageSize);
             
             return new PageResult<>(problems, total, pageSize, pageNum);
         } catch (Exception e) {
@@ -181,16 +174,7 @@ public class ProblemServiceImpl implements ProblemService {
     @Transactional(rollbackFor = Exception.class)
     public Problem addProblem(ProblemDTO problemDTO) {
         try {
-            // 添加分布式锁或者使用数据库唯一索引防止重复提交
-            String lockKey = "problem:add:" + problemDTO.getTitle();
-            
-            // 检查分类是否存在
-            Category category = categoryMapper.findById(problemDTO.getCategoryId());
-            if (category == null) {
-                throw new BusinessException("所选分类不存在");
-            }
-
-            // 检查标题是否重复
+            // 检查题目标题是否已存在
             Problem existingProblem = problemMapper.findByTitle(problemDTO.getTitle());
             if (existingProblem != null) {
                 throw new BusinessException("题目标题已存在");
@@ -198,15 +182,32 @@ public class ProblemServiceImpl implements ProblemService {
 
             Problem problem = new Problem();
             BeanUtils.copyProperties(problemDTO, problem);
-            problem.setCreateTime(LocalDateTime.now());
-            problem.setUpdateTime(LocalDateTime.now());
+            
+            // 确保设置这些路径
+            problem.setDockerComposePath(problemDTO.getDockerComposePath());
+            problem.setAttachmentPath(problemDTO.getAttachmentPath());
+            
+            // 添加日志
+            log.info("Problem data before insert: {}", problem);
+            log.info("Attachment path: {}", problem.getAttachmentPath());
+            
+            // 设置时间
+            LocalDateTime now = LocalDateTime.now();
+            problem.setCreateTime(now);
+            problem.setUpdateTime(now);
+
+            // 设置默认值
+            problem.setEnabled(true);
 
             int rows = problemMapper.insert(problem);
             if (rows != 1) {
                 throw new BusinessException("添加题目失败");
             }
 
-            log.info("题目添加成功: {}", problem.getTitle());
+            // 添加日志
+            log.info("Problem inserted successfully with id: {}", problem.getId());
+            log.info("Final problem data: {}", problem);
+
             return problem;
         } catch (BusinessException e) {
             throw e;
@@ -239,8 +240,13 @@ public class ProblemServiceImpl implements ProblemService {
             problem.setScore(problemDTO.getScore());
             problem.setDifficulty(problemDTO.getDifficulty());
             problem.setCategoryId(problemDTO.getCategoryId());
+            problem.setDockerComposePath(problemDTO.getDockerComposePath());
+            problem.setAttachmentPath(problemDTO.getAttachmentPath());
             problem.setEnabled(problemDTO.getEnabled());
             problem.setUpdateTime(LocalDateTime.now());
+
+            // 添加日志
+            log.info("Updating problem with data: {}", problem);
 
             // 保存更新
             int rows = problemMapper.update(problem);
@@ -412,7 +418,8 @@ public class ProblemServiceImpl implements ProblemService {
     }
 
     public String getReadmeContent(String path) throws IOException {
-        Path filePath = Paths.get(readmePath, path);
+        String newPath = path.replaceFirst("readme/", "");
+        Path filePath = Paths.get(readmePath, newPath);
         if (!Files.exists(filePath)) {
             throw new BusinessException("README文件不存在");
         }

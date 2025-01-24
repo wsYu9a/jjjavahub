@@ -32,17 +32,16 @@ export function getCategoryList() {
 export function getProblemList(params) {
   console.log('API调用参数:', params) // 添加调试日志
   return request({
-    url: '/api/admin/problem/list',
+    url: '/api/problems',
     method: 'get',
-    params,
-    signal: controller.signal
+    params
   })
 }
 
 // 获取题目详情
-export function getProblemDetail(id) {
+export function getProblemById(id) {
   return request({
-    url: `/api/admin/problem/detail/${id}`,
+    url: `/api/problems/${id}`,
     method: 'get'
   })
 }
@@ -129,7 +128,48 @@ export function getLatestProblems(params) {
   })
 }
 
+// 上传附件
+export function uploadAttachments(data) {
+  return request({
+    url: '/api/admin/problem/upload/attachments',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data,
+    transformRequest: [function (data) {
+      return data
+    }],
+    timeout: 30000  // 30秒超时
+  })
+}
+
 // 导出取消方法
 export function cancelRequests() {
   controller.abort()
+}
+
+// 启动题目环境
+export function startProblemEnv(problemId) {
+  return request({
+    url: `/api/problems/${problemId}/env/start`,
+    method: 'post'
+  })
+}
+
+// 停止题目环境
+export function stopProblemEnv(problemId) {
+  return request({
+    url: `/api/problems/${problemId}/env/stop`,
+    method: 'post',
+    timeout: 60000  // 设置为1分钟
+  })
+}
+
+// 获取环境状态
+export function getProblemEnvStatus(problemId) {
+  return request({
+    url: `/api/problems/${problemId}/env/status`,
+    method: 'get'
+  })
 } 
