@@ -1,4 +1,4 @@
-package com.wsyu9a.controller;
+package com.wsyu9a.controller.user;
 
 import com.wsyu9a.common.Result;
 import com.wsyu9a.common.PageResult;

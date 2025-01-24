@@ -2,15 +2,28 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
-const service = axios.create({
+const request = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: 10000,
-  withCredentials: true
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
 })
 
 // 请求拦截器
-service.interceptors.request.use(
+request.interceptors.request.use(
   config => {
+    // 打印请求信息
+    console.log('Request:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers,
+      data: config.data,
+      params: config.params
+    })
+
     // 定义不需要token的接口列表
     const publicApis = [
       '/api/user/login',
@@ -35,8 +48,15 @@ service.interceptors.request.use(
 )
 
 // 响应拦截器
-service.interceptors.response.use(
+request.interceptors.response.use(
   response => {
+    // 打印响应信息
+    console.log('Response:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    })
+
     const res = response.data
     
     if (res.code !== 200) {
@@ -61,7 +81,14 @@ service.interceptors.response.use(
     return res
   },
   error => {
-    console.error('Response error:', error)
+    // 打印错误信息
+    console.error('Response error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    })
+
     if (error.response?.status === 401) {
       // 清除本地存储的用户信息
       localStorage.removeItem('token')
@@ -81,4 +108,4 @@ service.interceptors.response.use(
   }
 )
 
-export default service 
+export default request 

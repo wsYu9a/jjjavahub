@@ -10,6 +10,7 @@
           :default-active="activeMenu"
           class="sidebar-menu"
           router
+          :collapse="isCollapse"
           background-color="#304156"
           text-color="#bfcbd9"
           active-text-color="#409EFF"
@@ -21,71 +22,41 @@
           </el-menu-item>
 
           <!-- 用户管理 -->
-          <el-sub-menu index="user">
+          <el-sub-menu index="/admin/user">
             <template #title>
               <el-icon><User /></el-icon>
               <span>用户管理</span>
             </template>
-            <el-menu-item index="/admin/user">
-              <el-icon><List /></el-icon>
-              <span>用户列表</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/role">
-              <el-icon><Setting /></el-icon>
-              <span>角色管理</span>
-            </el-menu-item>
+            <el-menu-item index="/admin/user">用户列表</el-menu-item>
+            <el-menu-item index="/admin/role">角色管理</el-menu-item>
           </el-sub-menu>
 
           <!-- 题目管理 -->
-          <el-sub-menu index="problem">
+          <el-sub-menu index="/admin/problem">
             <template #title>
               <el-icon><Document /></el-icon>
               <span>题目管理</span>
             </template>
-            <el-menu-item index="/admin/category">
-              <el-icon><Collection /></el-icon>
-              <span>分类管理</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/problem">
-              <el-icon><List /></el-icon>
-              <span>题目列表</span>
-            </el-menu-item>
+            <el-menu-item index="/admin/category">分类管理</el-menu-item>
+            <el-menu-item index="/admin/problem">题目列表</el-menu-item>
           </el-sub-menu>
 
           <!-- 公告管理 -->
-          <el-sub-menu index="announcement">
+          <el-sub-menu index="/admin/announcement">
             <template #title>
               <el-icon><Bell /></el-icon>
               <span>公告管理</span>
             </template>
-            <el-menu-item index="/admin/announcement">
-              <el-icon><List /></el-icon>
-              <span>公告列表</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/announcement/create">
-              <el-icon><Document /></el-icon>
-              <span>发布公告</span>
-            </el-menu-item>
+            <el-menu-item index="/admin/announcement">公告列表</el-menu-item>
           </el-sub-menu>
 
           <!-- 系统管理 -->
-          <el-sub-menu index="system">
+          <el-sub-menu index="/admin/system">
             <template #title>
               <el-icon><Setting /></el-icon>
               <span>系统管理</span>
             </template>
-            <el-menu-item index="/admin/system/config">
-              <el-icon><Setting /></el-icon>
-              <span>系统配置</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/system/log">
-              <el-icon><Document /></el-icon>
-              <span>系统日志</span>
-            </el-menu-item>
-            <el-menu-item index="/admin/system/backup">
-              <el-icon><Upload /></el-icon>
-              <span>数据备份</span>
-            </el-menu-item>
+            <el-menu-item index="/admin/system/config">Docker配置</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -127,7 +98,11 @@
 
         <!-- 内容区域 -->
         <el-main class="main-content">
-          <router-view />
+          <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
         </el-main>
       </el-container>
     </el-container>
@@ -135,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -154,10 +129,13 @@ import {
 
 const router = useRouter()
 const route = useRoute()
+const isCollapse = ref(false)
 const username = ref(localStorage.getItem('username') || '')
 
-// 根据当前路由计算激活的菜单
-const activeMenu = computed(() => route.path)
+// 计算当前激活的菜单
+const activeMenu = computed(() => {
+  return route.path
+})
 
 // 菜单标签映射
 const menuLabels = {
@@ -167,10 +145,7 @@ const menuLabels = {
   '/admin/category': '分类管理',
   '/admin/problem': '题目列表',
   '/admin/announcement': '公告列表',
-  '/admin/announcement/create': '发布公告',
-  '/admin/system/config': '系统配置',
-  '/admin/system/log': '系统日志',
-  '/admin/system/backup': '数据备份'
+  '/admin/system/config': '系统配置'
 }
 
 // 计算当前菜单标签
@@ -185,6 +160,11 @@ const handleLogout = () => {
   ElMessage.success('退出成功')
   router.push('/login')
 }
+
+// 添加组件卸载前的清理
+onBeforeUnmount(() => {
+  // 清理可能的定时器或事件监听器
+})
 </script>
 
 <style lang="scss" scoped>
@@ -272,5 +252,15 @@ const handleLogout = () => {
 
 :deep(.el-menu-item.is-active) {
   background-color: #263445;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style> 

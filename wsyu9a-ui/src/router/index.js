@@ -63,27 +63,9 @@ const router = createRouter({
           meta: { requiresAuth: true, roles: ['ADMIN'] }
         },
         {
-          path: 'announcement/create',
-          name: 'AnnouncementCreate',
-          component: () => import('@/views/admin/announcement/create.vue'),
-          meta: { requiresAuth: true, roles: ['ADMIN'] }
-        },
-        {
           path: 'system/config',
           name: 'SystemConfig',
           component: () => import('@/views/admin/system/config.vue'),
-          meta: { requiresAuth: true, roles: ['ADMIN'] }
-        },
-        {
-          path: 'system/log',
-          name: 'SystemLog',
-          component: () => import('@/views/admin/system/log.vue'),
-          meta: { requiresAuth: true, roles: ['ADMIN'] }
-        },
-        {
-          path: 'system/backup',
-          name: 'SystemBackup',
-          component: () => import('@/views/admin/system/backup.vue'),
           meta: { requiresAuth: true, roles: ['ADMIN'] }
         }
       ]
@@ -118,40 +100,39 @@ const router = createRouter({
   ]
 })
 
-// 路由守卫
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  const role = localStorage.getItem('role')
-  
-  console.log('路由守卫: from=', from.path, 'to=', to.path) // 添加调试日志
-  
-  // 如果是公共页面，直接放行
-  if (to.meta.isPublic) {
-    next()
-    return
-  }
+// 全局路由守卫
+router.beforeEach(async (to, from, next) => {
+  try {
+    const token = localStorage.getItem('token')
+    const role = localStorage.getItem('role')
 
-  // 如果已登录要访问登录页，重定向到对应的首页
-  if (['/login', '/register', '/resetpwd'].includes(to.path) && token) {
-    console.log('已登录，准备重定向')
-    next(role === 'ADMIN' ? '/admin' : '/dashboard')
-    return
-  }
-
-  // 验证需要登录的页面
-  if (to.meta.requiresAuth) {
-    if (!token) {
-      console.log('未登录，重定向到登录页')
-      next('/login')
-    } else if (to.meta.roles && !to.meta.roles.includes(role?.toUpperCase())) {
-      console.log('无权限访问:', role, '需要角色:', to.meta.roles)
-      next('/')
-    } else {
-      console.log('验证通过，允许访问')
+    // 处理公共页面
+    if (to.meta.isPublic) {
       next()
+      return
     }
-  } else {
+
+    // 处理已登录用户访问登录页
+    if (['/login', '/register', '/resetpwd'].includes(to.path) && token) {
+      next(role === 'ADMIN' ? '/admin' : '/dashboard')
+      return
+    }
+
+    // 处理需要认证的页面
+    if (to.meta.requiresAuth) {
+      if (!token) {
+        next('/login')
+        return
+      }
+      if (to.meta.roles && !to.meta.roles.includes(role?.toUpperCase())) {
+        next('/')
+        return
+      }
+    }
     next()
+  } catch (error) {
+    console.error('Navigation error:', error)
+    next(false)
   }
 })
 

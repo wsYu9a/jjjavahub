@@ -1,5 +1,8 @@
 import request from '@/utils/request'
 
+// 添加取消请求的支持
+const controller = new AbortController()
+
 // 用户端接口
 export function getUserProblemList(params) {
   console.log('API调用参数:', params)  // 添加调试日志
@@ -31,7 +34,8 @@ export function getProblemList(params) {
   return request({
     url: '/api/admin/problem/list',
     method: 'get',
-    params
+    params,
+    signal: controller.signal
   })
 }
 
@@ -123,4 +127,9 @@ export function getLatestProblems(params) {
     method: 'get',
     params
   })
+}
+
+// 导出取消方法
+export function cancelRequests() {
+  controller.abort()
 } 
