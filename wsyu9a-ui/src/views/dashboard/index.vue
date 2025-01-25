@@ -91,11 +91,11 @@
                   </div>
                   <div class="stat-item">
                     <h4>积分</h4>
-                    <div class="stat-value">{{ userStats.score }}</div>
+                    <div class="stat-value">{{ userStats.totalScore }}</div>
                   </div>
                   <div class="stat-item">
                     <h4>排名</h4>
-                    <div class="stat-value">{{ userStats.rank }}</div>
+                    <div class="stat-value">{{ userStats.ranking }}</div>
                   </div>
                 </div>
               </el-card>
