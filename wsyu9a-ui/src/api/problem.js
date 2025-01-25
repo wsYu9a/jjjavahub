@@ -172,4 +172,13 @@ export function getProblemEnvStatus(problemId) {
     url: `/api/problems/${problemId}/env/status`,
     method: 'get'
   })
+}
+
+// 添加提交flag的API
+export function submitFlag(problemId, flag) {
+  return request({
+    url: `/api/problems/${problemId}/submit`,
+    method: 'post',
+    data: { flag }
+  })
 } 

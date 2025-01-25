@@ -138,6 +138,7 @@
                   v-model="submitForm.flag"
                   placeholder="请输入 flag"
                   clearable
+                  :disabled="isSubmitting"
                 />
               </el-form-item>
               <el-form-item>
@@ -145,9 +146,10 @@
                   type="primary" 
                   native-type="submit"
                   :loading="isSubmitting"
+                  :disabled="!submitForm.flag || envStatus !== 'running'"
                   class="submit-btn"
                 >
-                  提交
+                  {{ isSubmitting ? '提交中...' : '提交' }}
                 </el-button>
               </el-form-item>
             </el-form>
@@ -229,7 +231,7 @@ import {
   Download,
   CopyDocument
 } from '@element-plus/icons-vue'
-import { getUserProblemDetail, getProblemReadme, startProblemEnv, stopProblemEnv, getProblemEnvStatus } from '@/api/problem'
+import { getUserProblemDetail, getProblemReadme, startProblemEnv, stopProblemEnv, getProblemEnvStatus, submitFlag } from '@/api/problem'
 import { marked } from 'marked'
 import 'github-markdown-css'
 
@@ -481,13 +483,27 @@ const handleSubmit = async () => {
     return
   }
 
+  if (envStatus.value !== 'running') {
+    ElMessage.warning('请先启动题目环境')
+    return
+  }
+
   isSubmitting.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    ElMessage.success('提交成功')
-    submitForm.value.flag = ''
+    const res = await submitFlag(route.params.id, submitForm.value.flag)
+    // 只处理成功的情况
+    if (res.code === 200) {
+      ElMessage.success('恭喜你，答对了！')
+      submitForm.value.flag = ''
+      // 刷新题目信息
+      await getDetail()
+    } else {
+      // 处理业务错误
+      ElMessage.error(res.message || '提交失败')
+    }
   } catch (error) {
-    ElMessage.error('提交失败')
+    // 只处理网络错误或其他异常
+    console.error('提交失败:', error)
   } finally {
     isSubmitting.value = false
   }
@@ -781,6 +797,20 @@ const envStatusType = computed(() => {
         .submit-card {
           .submit-btn {
             width: 100%;
+            &:disabled {
+              cursor: not-allowed;
+            }
+          }
+          
+          .el-input {
+            &.is-disabled {
+              .el-input__inner {
+                background-color: #f5f7fa;
+                border-color: #e4e7ed;
+                color: #c0c4cc;
+                cursor: not-allowed;
+              }
+            }
           }
         }
 

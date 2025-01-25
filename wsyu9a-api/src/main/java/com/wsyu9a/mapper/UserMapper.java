@@ -55,4 +55,7 @@ public interface UserMapper {
     List<User> findUsersByPage(@Param("searchKey") String searchKey, 
                               @Param("offset") Integer offset, 
                               @Param("pageSize") Integer pageSize);
+    
+    @Update("UPDATE sys_user SET score = #{score} WHERE id = #{userId}")
+    void updateScore(@Param("userId") Long userId, @Param("score") Integer score);
 } 

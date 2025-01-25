@@ -14,4 +14,5 @@ public class User {
     private LocalDateTime updateTime;
     private Integer deleted;
     private Boolean enabled;
+    private Integer score;
 } 

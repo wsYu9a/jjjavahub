@@ -36,4 +36,12 @@ public interface ProblemService {
      * @throws IOException 如果文件读取失败
      */
     String getReadmeContent(String path) throws IOException;
+
+    /**
+     * 提交flag
+     * @param username 用户名
+     * @param problemId 题目ID
+     * @param flag 提交的flag
+     */
+    void submitFlag(String username, Long problemId, String flag);
 } 

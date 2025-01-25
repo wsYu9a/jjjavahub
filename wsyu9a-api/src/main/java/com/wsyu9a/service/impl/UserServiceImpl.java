@@ -49,6 +49,7 @@ public class UserServiceImpl implements UserService {
         user.setRole("USER");
         user.setEnabled(true);
         user.setDeleted(0);
+        user.setScore(0);  // 初始化积分为0
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
 
@@ -149,7 +150,7 @@ public class UserServiceImpl implements UserService {
 
             // 生成token
             String token = jwtUtil.generateToken(user.getUsername());
-            log.info("登录成功，用���名: {}, 角色: {}", loginDTO.getUsername(), user.getRole());
+            log.info("登录成功，用户名: {}, 角色: {}", loginDTO.getUsername(), user.getRole());
             
             return LoginResponseDTO.builder()
                     .token(token)

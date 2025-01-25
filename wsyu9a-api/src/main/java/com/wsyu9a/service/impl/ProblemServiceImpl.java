@@ -36,6 +36,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.io.IOException;
+import com.wsyu9a.entity.Submission;
+import com.wsyu9a.mapper.SubmissionMapper;
+import com.wsyu9a.service.DockerService;
+import com.wsyu9a.dto.docker.DockerEnvDTO;
+import com.wsyu9a.mapper.UserMapper;
+import com.wsyu9a.entity.User;
 
 @Slf4j
 @Service
@@ -44,6 +50,9 @@ public class ProblemServiceImpl implements ProblemService {
 
     private final ProblemMapper problemMapper;
     private final CategoryMapper categoryMapper;
+    private final SubmissionMapper submissionMapper;
+    private final DockerService dockerService;
+    private final UserMapper userMapper;
 
     @Value("${problem.docker-compose.upload-path}")
     private String uploadPath;
@@ -424,5 +433,63 @@ public class ProblemServiceImpl implements ProblemService {
             throw new BusinessException("README文件不存在");
         }
         return Files.readString(filePath);
+    }
+
+    @Override
+    @Transactional
+    public void submitFlag(String username, Long problemId, String flag) {
+        // 获取用户
+        User user = userMapper.findByUsername(username);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        
+        // 获取题目
+        Problem problem = problemMapper.findById(problemId);
+        if (problem == null) {
+            throw new BusinessException("题目不存在");
+        }
+        
+        // 检查是否已经解决过
+        if (submissionMapper.hasSolved(username, problemId)) {
+            throw new BusinessException("你已经解决过这道题目");
+        }
+        
+        // 获取容器环境变量中的flag
+        DockerEnvDTO env = dockerService.getEnvironmentStatus(problemId);
+        if (env == null || !"running".equals(env.getStatus())) {
+            throw new BusinessException("请先启动题目环境");
+        }
+
+        // 验证flag
+        String envFlag = env.getFlag();
+        if (envFlag == null) {
+            log.error("题目 {} 的环境变量中没有flag", problemId);
+            throw new BusinessException("题目环境异常，请联系管理员");
+        }
+        
+        boolean isCorrect = envFlag.equals(flag);
+        
+        // 记录提交
+        Submission submission = Submission.builder()
+            .userId(user.getId())
+            .problemId(problemId)
+            .flag(flag)
+            .correct(isCorrect)
+            .submitTime(LocalDateTime.now())
+            .build();
+        
+        submissionMapper.insert(submission);
+        
+        if (!isCorrect) {
+            throw new BusinessException("Flag不正确");
+        }
+        
+        // 更新用户分数
+        user.setScore(user.getScore() + problem.getScore());
+        userMapper.updateScore(user.getId(), user.getScore());
+        
+        // 更新题目统计信息
+        problemMapper.updateStatistics(problemId);
     }
 } 

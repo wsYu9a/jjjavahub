@@ -2,6 +2,7 @@ package com.wsyu9a.service.impl;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.PortBinding;
@@ -149,43 +150,60 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public DockerEnvDTO getEnvironmentStatus(Long problemId) {
         try {
-            List<Container> containers = dockerClient.listContainersCmd()
-                .withNameFilter(Collections.singletonList("problem-" + problemId))
-                .exec();
-            
-            if (containers.isEmpty()) {
-                return null;
+            // 获取容器
+            Container container = getContainer(problemId);
+            if (container == null) {
+                return DockerEnvDTO.builder()
+                    .problemId(problemId)
+                    .status("stopped")
+                    .build();
             }
-            
-            Container container = containers.get(0);
-            String containerId = container.getId();
 
-            // 使用 inspectContainer 获取详细信息
-            var inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
+            // 获取容器详细信息
+            InspectContainerResponse containerInfo = dockerClient.inspectContainerCmd(container.getId()).exec();
             
-            // 获取环境变量和过期时间
-            String[] envVars = inspectResponse.getConfig().getEnv();
-            LocalDateTime expireTime = null;
+            // 获取环境变量中的flag
+            String flag = null;
+            String[] envVars = containerInfo.getConfig().getEnv();
             if (envVars != null) {
                 for (String env : envVars) {
-                    if (env.startsWith("expire_time=")) {
-                        expireTime = LocalDateTime.parse(env.substring(11));
+                    if (env.startsWith("flag=")) {
+                        flag = env.substring(5);  // 去掉 "FLAG=" 前缀
                         break;
                     }
                 }
             }
 
+            // 获取过期时间
+            LocalDateTime expireTime = null;
+            Map<String, String> labels = containerInfo.getConfig().getLabels();
+            if (labels != null && labels.containsKey("expire_time")) {
+                expireTime = LocalDateTime.parse(labels.get("expire_time"));
+            }
+
+            // 获取端口映射
+            Integer port = null;
+            if (container.getPorts() != null && container.getPorts().length > 0) {
+                port = container.getPorts()[0].getPublicPort();
+            }
+
+            // 构建返回对象
             return DockerEnvDTO.builder()
                 .problemId(problemId)
-                .containerId(containerId)
+                .containerId(container.getId())
                 .status("running")
-                .url("http://" + dockerHost + ":" + container.getPorts()[0].getPublicPort())
-                .port(container.getPorts()[0].getPublicPort())
+                .url(port != null ? "http://" + dockerHost + ":" + port : null)
+                .port(port)
+                .flag(flag)  // 添加flag
                 .expireTime(expireTime)
                 .build();
+
         } catch (Exception e) {
-            log.error("Failed to get environment status", e);
-            return null;
+            log.error("获取容器状态失败: {}", e.getMessage());
+            return DockerEnvDTO.builder()
+                .problemId(problemId)
+                .status("error")
+                .build();
         }
     }
 
@@ -335,5 +353,17 @@ public class DockerServiceImpl implements DockerService {
     private int generateRandomPort() {
         // 生成随机端口（10000-65535之间）
         return (int) (Math.random() * 55535) + 10000;
+    }
+
+    private Container getContainer(Long problemId) {
+        List<Container> containers = dockerClient.listContainersCmd()
+            .withNameFilter(Collections.singletonList("problem-" + problemId))
+            .exec();
+        
+        if (containers.isEmpty()) {
+            return null;
+        }
+        
+        return containers.get(0);
     }
 } 

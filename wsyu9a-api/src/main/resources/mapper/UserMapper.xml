@@ -12,10 +12,10 @@
     
     <insert id="insert" parameterType="com.wsyu9a.entity.User" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO sys_user (
-            username, email, password, role, enabled, deleted, 
+            username, email, password, role, enabled, deleted, score,
             create_time, update_time
         ) VALUES (
-            #{username}, #{email}, #{password}, #{role}, #{enabled}, #{deleted},
+            #{username}, #{email}, #{password}, #{role}, #{enabled}, #{deleted}, #{score},
             #{createTime}, #{updateTime}
         )
     </insert>
@@ -29,6 +29,7 @@
             <if test="user.role != null">role = #{user.role},</if>
             <if test="user.enabled != null">enabled = #{user.enabled},</if>
             <if test="user.deleted != null">deleted = #{user.deleted},</if>
+            <if test="user.score != null">score = #{user.score},</if>
             <if test="user.updateTime != null">update_time = #{user.updateTime}</if>
         </set>
         WHERE id = #{user.id} AND deleted = 0

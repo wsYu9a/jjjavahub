@@ -141,4 +141,12 @@ public interface ProblemMapper {
 
     @Select("SELECT * FROM problem WHERE id = #{id}")
     Problem selectById(Long id);
+
+    @Update("UPDATE problem SET " +
+            "submit_count = (SELECT COUNT(*) FROM submission WHERE problem_id = #{problemId}), " +
+            "solved_count = (SELECT COUNT(DISTINCT user_id) FROM submission WHERE problem_id = #{problemId} AND correct = true), " +
+            "pass_rate = (SELECT ROUND(IFNULL((SELECT COUNT(*) FROM submission WHERE problem_id = #{problemId} AND correct = true) * 100.0 / " +
+            "NULLIF((SELECT COUNT(*) FROM submission WHERE problem_id = #{problemId}), 0), 0), 2)) " +
+            "WHERE id = #{problemId}")
+    void updateStatistics(@Param("problemId") Long problemId);
 } 
