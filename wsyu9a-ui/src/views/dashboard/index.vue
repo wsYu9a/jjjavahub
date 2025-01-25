@@ -160,9 +160,12 @@
                     <div class="dynamic-item">
                       <div class="dynamic-content">
                         <span class="username">{{ item.username }}</span>
-                        <span class="time">{{ formatDateTime(item.solveTime) }}</span>
+                        <span class="time">{{ item.solveTime }}</span>
                         <span class="action">解决了</span>
-                        <span class="problem-title" @click="handleProblemClick(item.problemId)">
+                        <span 
+                          class="problem-title" 
+                          @click="handleProblemClick(item.problemId)"
+                        >
                           {{ item.problemTitle }}
                         </span>
                       </div>
@@ -280,6 +283,8 @@ import { getUserProblemList } from '@/api/problem'
 import request from '@/utils/request'
 import { getAnnouncementList } from '@/api/announcement'
 import { formatDateTime, formatTime } from '@/utils/format'
+import { getLatestSolveRecords } from '@/api/solve-records'
+import { formatRelativeTime } from '@/utils/timeFormat'
 
 const router = useRouter()
 const username = ref(localStorage.getItem('username') || '')
@@ -371,8 +376,10 @@ const getDifficultyLabel = (difficulty) => {
   return labels[difficulty]
 }
 
-const handleProblemClick = (id) => {
-  router.push(`/problem/${id}`)
+const handleProblemClick = (problemId) => {
+  if (problemId) {
+    router.push(`/problem/${problemId}`)
+  }
 }
 
 // 切换到题目列表
@@ -447,44 +454,26 @@ const isToday = (dateStr) => {
          date.getFullYear() === today.getFullYear()
 }
 
-// 解题动态列表（Demo数据）
-const solveDynamics = ref([
-  {
-    id: 1,
-    username: '张三',
-    problemId: 1,
-    problemTitle: 'SQL注入基础',
-    solveTime: '2024-03-20 10:30:00'
-  },
-  {
-    id: 2,
-    username: '李四',
-    problemId: 3,
-    problemTitle: '文件上传漏洞',
-    solveTime: '2024-03-20 09:45:00'
-  },
-  {
-    id: 3,
-    username: '王五',
-    problemId: 2,
-    problemTitle: 'XSS攻击入门',
-    solveTime: '2024-03-20 09:15:00'
-  },
-  {
-    id: 4,
-    username: '赵六',
-    problemId: 4,
-    problemTitle: 'PHP反序列化',
-    solveTime: '2024-03-20 08:30:00'
-  },
-  {
-    id: 5,
-    username: '孙七',
-    problemId: 5,
-    problemTitle: 'RCE漏洞利用',
-    solveTime: '2024-03-19 23:45:00'
+// 解题动态列表
+const solveDynamics = ref([])
+
+// 获取最新解题记录
+const fetchLatestSolveRecords = async () => {
+  try {
+    const res = await getLatestSolveRecords()
+    if (res.code === 200) {
+      solveDynamics.value = res.data.map(record => ({
+        username: record.username,
+        problemId: record.problemId,
+        problemTitle: record.problemTitle,
+        solveTime: formatRelativeTime(record.solveTime)
+      }))
+    }
+  } catch (error) {
+    console.error('获取解题动态失败:', error)
+    ElMessage.error('获取解题动态失败')
   }
-])
+}
 
 onMounted(() => {
   console.log('组件挂载，准备获取最新题目')
@@ -496,6 +485,7 @@ onMounted(() => {
   }
   fetchLatestProblems()
   fetchLatestAnnouncements()
+  fetchLatestSolveRecords()
 })
 </script>
 
@@ -1068,5 +1058,21 @@ onMounted(() => {
 
 :deep(.el-skeleton) {
   padding: 16px;
+}
+
+.problem-title {
+  color: #303133;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  &:hover {
+    color: var(--el-color-primary);
+  }
 }
 </style> 
