@@ -112,12 +112,15 @@ public interface UserMapper {
     /**
      * 获取用户各分类解题数量
      */
-    @Select("SELECT pc.name, COUNT(DISTINCT s.problem_id) as count " +
-            "FROM submission s " +
-            "JOIN problem p ON s.problem_id = p.id " +
-            "JOIN problem_category pc ON p.category_id = pc.id " +
-            "WHERE s.user_id = (SELECT id FROM sys_user WHERE username = #{username}) " +
-            "AND s.correct = true " +
-            "GROUP BY pc.id, pc.name")
+    @Select("SELECT pc.name, COALESCE(sub.count, 0) as count\n" +
+            "FROM problem_category pc\n" +
+            "LEFT JOIN (\n" +
+            "    SELECT p.category_id, COUNT(DISTINCT s.problem_id) as count\n" +
+            "    FROM submission s\n" +
+            "    JOIN problem p ON s.problem_id = p.id\n" +
+            "    WHERE s.user_id = (SELECT id FROM sys_user WHERE username = #{username})\n" +
+            "    AND s.correct = true\n" +
+            "    GROUP BY p.category_id\n" +
+            ") sub ON pc.id = sub.category_id;")
     List<Map<String, Object>> getCategoryStats(@Param("username") String username);
 } 

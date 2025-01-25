@@ -1,5 +1,14 @@
 import request from '@/utils/request'
 
+
+export function getDashboardStats(params){
+  return request({
+    url: '/api/admin/dashboard/stats',
+    method: 'get',
+    params
+  })
+}
+
 // 获取所有用户信息
 export function getUserList(params) {
   return request({

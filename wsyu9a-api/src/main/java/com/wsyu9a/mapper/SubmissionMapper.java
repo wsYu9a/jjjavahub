@@ -57,13 +57,13 @@ public interface SubmissionMapper {
             ", 2)")
     double getPassRate(@Param("problemId") Long problemId);
 
-    @Select("SELECT u.username, p.id as problemId, p.title as problemTitle, s.submit_time as solveTime " +
-            "FROM submission s " +
-            "JOIN sys_user u ON s.user_id = u.id " +
-            "JOIN problem p ON s.problem_id = p.id " +
-            "WHERE s.correct = true " +
-            "ORDER BY s.submit_time DESC " +
-            "LIMIT 5")
+    @Select("SELECT u.username, p.id as problemId, p.title as problemTitle, s.submit_time as solveTime, p.score, p.difficulty\n" +
+            "FROM submission s\n" +
+            "JOIN sys_user u ON s.user_id = u.id\n" +
+            "JOIN problem p ON s.problem_id = p.id\n" +
+            "WHERE s.correct = true\n" +
+            "ORDER BY s.submit_time DESC\n" +
+            "LIMIT 5;")
     List<SolveRecordDTO> getLatestSolveRecords();
 
     /**

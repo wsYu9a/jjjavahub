@@ -9,7 +9,7 @@
               <el-avatar :size="120" :src="userInfo.avatar" />
               <h2 class="username">{{ userInfo.username }}</h2>
               <div class="role">{{ userInfo.role === 'ADMIN' ? '管理员' : '普通用户' }}</div>
-              <div class="join-time">加入时间：{{ formatDate(userInfo.createTime) }}</div>
+              <div class="join-time">你已经加入平台 {{ daysSinceJoin }} 天</div>
               <el-button type="primary" size="large" @click="handleEdit">
                 编辑资料
               </el-button>
@@ -35,7 +35,7 @@
               <el-col :xs="24" :sm="12">
                 <div class="stat-item">
                   <div class="label">排名</div>
-                  <div class="value">#{{ userStats.rank }}</div>
+                  <div class="value">#{{ userStats.ranking }}</div>
                 </div>
               </el-col>
               <el-col :xs="24" :sm="12">
@@ -92,7 +92,7 @@
           </div>
         </template>
         <el-table :data="recentSolves" stripe>
-          <el-table-column prop="title" label="题目" min-width="200" />
+          <el-table-column prop="problemTitle" label="题目" min-width="200" />
           <el-table-column prop="difficulty" label="难度" width="100">
             <template #default="{ row }">
               <el-tag :type="getDifficultyType(row.difficulty)" size="small">
@@ -172,44 +172,44 @@ import {
   CaretTop,
   CaretBottom
 } from '@element-plus/icons-vue'
+import { getUserStats } from '@/api/user'
 
 // 用户信息
 const userInfo = ref({
-  username: 'demo_user',
-  role: 'USER',
-  avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-  createTime: '2024-01-01'
+  username: '',
+  role: '',
+  avatar: '',
+  createTime: ''
 })
 
 // 用户统计
 const userStats = ref({
-  totalScore: 1500,
-  rank: 42,
-  solvedCount: 25,
-  submitCount: 50,
-  weekScore: 150,    // 本周新增积分
-  rankChange: 5,     // 排名提升
-  weekSolved: 3,     // 本周解题数
-  weekSubmit: 8      // 本周提交数
+  totalScore: 0,
+  ranking: 0,
+  solvedCount: 0,
+  submitCount: 0
+})
+
+// 计算加入天数
+const daysSinceJoin = computed(() => {
+  if (!userInfo.value.createTime) return 0
+  const joinDate = dayjs(userInfo.value.createTime)
+  const today = dayjs()
+  return Math.ceil(today.diff(joinDate, 'day', true))
 })
 
 // 难度分布统计
 const difficultyStats = ref([
-  { difficulty: 'EASY', name: '简单', solved: 15, total: 30, color: '#67C23A' },
-  { difficulty: 'MEDIUM', name: '中等', solved: 8, total: 20, color: '#E6A23C' },
-  { difficulty: 'HARD', name: '困难', solved: 2, total: 10, color: '#F56C6C' }
+  { difficulty: 'EASY', name: '简单', solved: 0, total: 30, color: '#67C23A' },
+  { difficulty: 'MEDIUM', name: '中等', solved: 0, total: 20, color: '#E6A23C' },
+  { difficulty: 'HARD', name: '困难', solved: 0, total: 10, color: '#F56C6C' }
 ])
 
+// 分类统计
+const categoryStats = ref([])
+
 // 最近解题记录
-const recentSolves = ref([
-  {
-    title: '示例题目1',
-    difficulty: 'EASY',
-    score: 100,
-    solveTime: '2024-03-15 14:30:00'
-  },
-  // ... 更多记录
-])
+const recentSolves = ref([])
 
 // 编辑表单
 const showEditDialog = ref(false)
@@ -227,15 +227,6 @@ const editRules = {
     { pattern: /^[a-zA-Z0-9_-]+$/, message: '只能包含字母、数字、下划线和连字符', trigger: 'blur' }
   ]
 }
-
-// 分类统计
-const categoryStats = ref([
-  { name: 'Web', solved: 10, total: 20 },
-  { name: 'Crypto', solved: 8, total: 15 },
-  { name: 'Pwn', solved: 5, total: 12 },
-  { name: 'Misc', solved: 2, total: 8 },
-  { name: 'Reverse', solved: 3, total: 10 }
-])
 
 // 雷达图相关
 const difficultyChartRef = ref(null)
@@ -274,53 +265,40 @@ const initDifficultyChart = () => {
       emphasis: {
         label: {
           show: true,
-          fontSize: 16,
+          fontSize: '16',
           fontWeight: 'bold'
         }
       },
+      labelLine: {
+        show: false
+      },
       data: difficultyStats.value.map(item => ({
-        name: item.name,
         value: item.solved,
+        name: item.name,
         itemStyle: {
           color: item.color
-        },
-        total: item.total
+        }
       }))
     }]
   }
   difficultyChart.setOption(option)
 }
 
-// 初始化分类图表
+// 初始化分类统计图
 const initCategoryChart = () => {
   if (!categoryChartRef.value) return
 
   categoryChart = echarts.init(categoryChartRef.value)
   const option = {
     tooltip: {
-      trigger: 'item'
+      trigger: 'item',
+      formatter: '{b}: {c}题'
     },
     radar: {
-      shape: 'polygon',
       indicator: categoryStats.value.map(item => ({
-        name: item.name,
-        max: item.total
-      })),
-      splitNumber: 4,
-      axisName: {
-        color: '#606266'
-      },
-      splitLine: {
-        lineStyle: {
-          color: ['#E4E7ED']
-        }
-      },
-      splitArea: {
-        show: true,
-        areaStyle: {
-          color: ['#fff', '#FAFAFA']
-        }
-      }
+        name: item.category,
+        max: Math.max(...categoryStats.value.map(i => i.solved)) + 1 // 动态设置最大值
+      }))
     },
     series: [{
       type: 'radar',
@@ -409,7 +387,48 @@ const handleEdit = () => {
   showEditDialog.value = true
 }
 
+const fetchUserStats = async () => {
+  try {
+    const response = await getUserStats()
+    if (response.code === 200) {
+      userStats.value = response.data
+      userInfo.value = {
+        username: response.data.username,
+        role: response.data.role,
+        avatar: response.data.avatar,
+        createTime: response.data.joinTime
+      }
+
+      // 更新难度分布统计
+      const stats = response.data.difficultyStats || {}
+      difficultyStats.value = difficultyStats.value.map(item => ({
+        ...item,
+        solved: stats[item.difficulty] || 0
+      }))
+
+      // 更新分类统计
+      categoryStats.value = Object.entries(response.data.categoryStats || {}).map(([category, solved]) => ({
+        category,
+        solved
+      }))
+
+      // 更新最近解题记录
+      recentSolves.value = response.data.recentSolves || []
+
+      // 初始化图表
+      initDifficultyChart()
+      initCategoryChart()
+    } else {
+      ElMessage.error('获取用户信息失败')
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    ElMessage.error('获取用户信息失败')
+  }
+}
+
 onMounted(() => {
+  fetchUserStats()
   initDifficultyChart()
   initCategoryChart()
   window.addEventListener('resize', handleResize)

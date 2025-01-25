@@ -23,16 +23,16 @@ export default [
     icon: 'Document',
     children: [
       {
+        title: '分类管理',
+        path: '/admin/category'
+      },
+      {
         title: '题目列表',
         path: '/admin/problem/list'
       },
       {
         title: '添加题目',
         path: '/admin/problem/add'
-      },
-      {
-        title: '分类管理',
-        path: '/admin/category'
       }
     ]
   },
@@ -46,7 +46,6 @@ export default [
       },
       {
         title: '容器管理',
-        icon: 'Monitor',
         path: '/admin/system/container'
       }
     ]
