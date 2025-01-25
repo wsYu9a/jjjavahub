@@ -5,6 +5,7 @@ import com.wsyu9a.dto.ProblemStatusDTO;
 import com.wsyu9a.entity.Problem;
 import com.wsyu9a.common.PageResult;
 import com.wsyu9a.common.Result;
+import com.wsyu9a.vo.ProblemVO;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
@@ -42,6 +43,20 @@ public interface ProblemService {
      * @param username 用户名
      * @param problemId 题目ID
      * @param flag 提交的flag
+     * @return 是否正确
      */
-    void submitFlag(String username, Long problemId, String flag);
+    boolean submitFlag(String username, Long problemId, String flag);
+
+    /**
+     * 获取用户题目列表
+     * @param username 用户名
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @param searchKey 搜索关键字
+     * @param categoryId 分类ID
+     * @param difficulty 难度
+     * @return 分页结果
+     */
+    PageResult<ProblemVO> getUserProblems(String username, Integer pageNum, Integer pageSize,
+            String searchKey, Long categoryId, String difficulty);
 } 

@@ -5,6 +5,7 @@ import com.wsyu9a.dto.UserDTO;
 import com.wsyu9a.dto.ResetPasswordDTO;
 import com.wsyu9a.dto.LoginDTO;
 import com.wsyu9a.dto.LoginResponseDTO;
+import com.wsyu9a.dto.UserStatsDTO;
 import com.wsyu9a.entity.User;
 import com.wsyu9a.exception.BusinessException;
 import com.wsyu9a.service.UserService;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Slf4j
 @RestController
@@ -50,6 +52,18 @@ public class UserController {
         } catch (Exception e) {
             log.error("登录异常, 用户名: " + loginDTO.getUsername(), e);
             return Result.fail("系统异常，请联系管理员");
+        }
+    }
+
+    @GetMapping("/stats")
+    public Result<UserStatsDTO> getUserStats(HttpServletRequest request) {
+        try {
+            String username = (String) request.getAttribute("username");
+            UserStatsDTO stats = userService.getUserStats(username);
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.error("获取用户统计信息失败", e);
+            return Result.fail("获取用户统计信息失败");
         }
     }
 } 

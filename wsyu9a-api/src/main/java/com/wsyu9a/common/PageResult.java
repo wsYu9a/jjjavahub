@@ -7,15 +7,13 @@ import java.util.List;
 public class PageResult<T> {
     private List<T> records;
     private long total;
-    private long size;
-    private long current;
-    private long pages;
+    private int pageSize;
+    private int pageNum;
 
-    public PageResult(List<T> records, long total, long size, long current) {
+    public PageResult(List<T> records, long total, int pageSize, int pageNum) {
         this.records = records;
         this.total = total;
-        this.size = size;
-        this.current = current;
-        this.pages = (total + size - 1) / size;
+        this.pageSize = pageSize;
+        this.pageNum = pageNum;
     }
 } 

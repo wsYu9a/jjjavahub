@@ -1,12 +1,10 @@
 <template>
   <div class="problem-detail">
-    <!-- 返回按钮 -->
+    <!-- 修改返回按钮 -->
     <el-button 
-      type="primary" 
-      plain
-      size="default"
+      class="back-btn" 
       @click="handleBack"
-      class="back-btn"
+      plain
     >
       <el-icon><ArrowLeft /></el-icon>
       返回
@@ -132,24 +130,28 @@
               </div>
             </template>
             
-            <el-form :model="submitForm" @submit.prevent="handleSubmit">
+            <el-form 
+              :model="submitForm"
+              @submit.prevent
+            >
               <el-form-item>
                 <el-input
                   v-model="submitForm.flag"
                   placeholder="请输入 flag"
                   clearable
-                  :disabled="isSubmitting"
+                  :disabled="submitting"
+                  @keyup.enter.stop.prevent
                 />
               </el-form-item>
               <el-form-item>
                 <el-button 
                   type="primary" 
-                  native-type="submit"
-                  :loading="isSubmitting"
+                  :loading="submitting"
                   :disabled="!submitForm.flag || envStatus !== 'running'"
                   class="submit-btn"
+                  @click.stop.prevent="handleSubmit"
                 >
-                  {{ isSubmitting ? '提交中...' : '提交' }}
+                  {{ submitting ? '提交中...' : '提交' }}
                 </el-button>
               </el-form-item>
             </el-form>
@@ -198,10 +200,6 @@
                 <span class="value">{{ problem.submitCount || 0 }}</span>
               </div>
               <div class="info-item">
-                <span class="label">通过率</span>
-                <span class="value">{{ problem.passRate || '0%' }}</span>
-              </div>
-              <div class="info-item">
                 <span class="label">解决人数</span>
                 <span class="value">{{ problem.solvedCount || 0 }}</span>
               </div>
@@ -234,6 +232,7 @@ import {
 import { getUserProblemDetail, getProblemReadme, startProblemEnv, stopProblemEnv, getProblemEnvStatus, submitFlag } from '@/api/problem'
 import { marked } from 'marked'
 import 'github-markdown-css'
+import { debounce } from 'lodash-es'
 
 const route = useRoute()
 const router = useRouter()
@@ -241,9 +240,9 @@ const loading = ref(false)
 const problem = ref({})
 const readme = ref('')
 
-// 返回上一页
+// 修改返回按钮处理函数
 const handleBack = () => {
-  router.go(-1)
+  router.push('/dashboard?activeMenu=problems')
 }
 
 // 格式化日期
@@ -477,37 +476,72 @@ onMounted(() => {
 
 const submitForm = ref({ flag: '' })
 
-const handleSubmit = async () => {
-  if (!submitForm.value.flag) {
-    ElMessage.warning('请输入flag')
+// 添加提交状态标记
+const submitting = ref(false)
+
+// 使用防抖包装 handleSubmit
+const debouncedSubmit = debounce(async () => {
+  console.log('[Flag Submit] 开始提交', {
+    problemId: route.params.id,
+    flag: submitForm.value.flag,
+    submitting: submitting.value,
+    timestamp: Date.now()  // 添加时间戳
+  })
+
+  if (submitting.value) {
+    console.log('[Flag Submit] 正在提交中，忽略重复请求')
     return
   }
 
-  if (envStatus.value !== 'running') {
-    ElMessage.warning('请先启动题目环境')
-    return
-  }
+  submitting.value = true
+  console.log('[Flag Submit] 设置提交状态为true')
 
-  isSubmitting.value = true
   try {
+    console.log('[Flag Submit] 发起API请求')
     const res = await submitFlag(route.params.id, submitForm.value.flag)
-    // 只处理成功的情况
+    console.log('[Flag Submit] API响应', res)
+
     if (res.code === 200) {
-      ElMessage.success('恭喜你，答对了！')
+      console.log('[Flag Submit] 提交成功')
+      ElMessage.success(res.message)
       submitForm.value.flag = ''
-      // 刷新题目信息
-      await getDetail()
     } else {
-      // 处理业务错误
-      ElMessage.error(res.message || '提交失败')
+      console.log('[Flag Submit] 提交失败', res.message)
+      ElMessage.error(res.message)
     }
   } catch (error) {
-    // 只处理网络错误或其他异常
-    console.error('提交失败:', error)
+    console.error('[Flag Submit] 提交异常', error)
+    ElMessage.error(error.message || '提交失败')
   } finally {
-    isSubmitting.value = false
+    console.log('[Flag Submit] 重置提交状态')
+    submitting.value = false
   }
+}, 300, { leading: true, trailing: false })  // 修改防抖配置，只执行第一次
+
+// 修改 handleSubmit 为同步函数
+const handleSubmit = (e) => {
+  console.log('[Flag Submit] handleSubmit 被调用', { 
+    type: e?.type,
+    timestamp: Date.now()
+  })
+  
+  // 阻止事件传播
+  e?.stopPropagation?.()
+  e?.preventDefault?.()
+  
+  // 如果已经在提交中，直接返回
+  if (submitting.value) {
+    console.log('[Flag Submit] 已在提交中，忽略重复调用')
+    return
+  }
+  
+  debouncedSubmit()
 }
+
+// 确保组件卸载时清理
+onBeforeUnmount(() => {
+  debouncedSubmit.cancel()
+})
 
 const downloadFile = (file) => {
   ElMessage.success(`开始下载：${file.name}`)
@@ -539,6 +573,28 @@ const envStatusType = computed(() => {
   }
   return typeMap[envStatus.value] || 'info'
 })
+
+// 格式化通过率
+const formatPassRate = (rate) => {
+  if (!rate) return '0%'
+  return `${rate}%`
+}
+
+// 获取题目详情时会自动获取这些统计数据
+const fetchProblemDetail = async () => {
+  try {
+    loading.value = true
+    const res = await getUserProblemDetail(route.params.id)
+    if (res.code === 200) {
+      problem.value = res.data
+    }
+  } catch (error) {
+    console.error('获取题目详情失败:', error)
+    ElMessage.error('获取题目详情失败')
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -564,6 +620,11 @@ const envStatusType = computed(() => {
     .el-icon {
       margin-right: 2px;
       font-size: 14px;
+    }
+
+    &:hover {
+      background-color: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
     }
   }
 
@@ -972,6 +1033,24 @@ const envStatusType = computed(() => {
 .el-button.is-loading {
   .el-icon {
     display: none;  // 在loading时隐藏图标
+  }
+}
+
+.info-list {
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    
+    .label {
+      color: #606266;
+    }
+    
+    .value {
+      font-weight: 500;
+      color: #409EFF;
+    }
   }
 }
 </style> 

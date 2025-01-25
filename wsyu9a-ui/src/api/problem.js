@@ -5,11 +5,15 @@ const controller = new AbortController()
 
 // 用户端接口
 export function getUserProblemList(params) {
+  const username = localStorage.getItem('username')  // 获取当前用户名
   console.log('API调用参数:', params)  // 添加调试日志
   return request({
-    url: '/api/problems',
+    url: '/api/problems/user',  // 修改为新的API路径
     method: 'get',
-    params
+    params: {
+      ...params,
+      username  // 添加用户名参数
+    }
   })
 }
 
@@ -174,11 +178,37 @@ export function getProblemEnvStatus(problemId) {
   })
 }
 
-// 添加提交flag的API
+let isSubmitting = false
+
 export function submitFlag(problemId, flag) {
+  if (isSubmitting) {
+    console.log('[API] submitFlag 已有请求在进行中，忽略重复请求')
+    return Promise.reject(new Error('请求正在处理中'))
+  }
+
+  console.log('[API] submitFlag 请求开始', { 
+    problemId, 
+    flag,
+    timestamp: Date.now()
+  })
+
+  isSubmitting = true
+
   return request({
-    url: `/api/problems/${problemId}/submit`,
+    url: `/api/problems/user/${problemId}/submit`,
     method: 'post',
-    data: { flag }
+    data: { flag },
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Cache-Control': 'no-cache'
+    }
+  }).then(res => {
+    console.log('[API] submitFlag 请求成功', res)
+    return res
+  }).catch(err => {
+    console.error('[API] submitFlag 请求失败', err)
+    throw err
+  }).finally(() => {
+    isSubmitting = false
   })
 } 

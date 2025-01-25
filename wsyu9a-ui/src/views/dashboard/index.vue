@@ -87,15 +87,15 @@
                 <div class="stats-container">
                   <div class="stat-item">
                     <h4>已解决题目</h4>
-                    <div class="stat-value">0</div>
+                    <div class="stat-value">{{ userStats.solvedCount }}</div>
                   </div>
                   <div class="stat-item">
-                    <h4>提交次数</h4>
-                    <div class="stat-value">0</div>
+                    <h4>积分</h4>
+                    <div class="stat-value">{{ userStats.score }}</div>
                   </div>
                   <div class="stat-item">
                     <h4>排名</h4>
-                    <div class="stat-value">-</div>
+                    <div class="stat-value">{{ userStats.rank }}</div>
                   </div>
                 </div>
               </el-card>
@@ -270,8 +270,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElLoading } from 'element-plus'
 import { House, Document, Trophy, User, Bell, Lock, SwitchButton, ArrowRight } from '@element-plus/icons-vue'
 import AnnouncementList from './announcement/index.vue'
@@ -285,8 +285,10 @@ import { getAnnouncementList } from '@/api/announcement'
 import { formatDateTime, formatTime } from '@/utils/format'
 import { getLatestSolveRecords } from '@/api/solve-records'
 import { formatRelativeTime } from '@/utils/timeFormat'
+import { getUserStats } from '@/api/user'
 
 const router = useRouter()
+const route = useRoute()
 const username = ref(localStorage.getItem('username') || '')
 const activeMenu = ref('home')
 
@@ -475,6 +477,35 @@ const fetchLatestSolveRecords = async () => {
   }
 }
 
+const userStats = ref({
+  solvedCount: 0,
+  score: 0,
+  rank: '-'
+})
+
+const fetchUserStats = async () => {
+  try {
+    const res = await getUserStats()
+    if (res.code === 200) {
+      userStats.value = res.data
+    }
+  } catch (error) {
+    console.error('获取用户统计信息失败:', error)
+  }
+}
+
+// 修改监听路由参数变化
+watch(
+  () => route.query.activeMenu,
+  (newActiveMenu) => {
+    if (newActiveMenu) {
+      activeMenu.value = newActiveMenu
+      activeMenuLabel.value = menuLabels[newActiveMenu]
+    }
+  },
+  { immediate: true }
+)
+
 onMounted(() => {
   console.log('组件挂载，准备获取最新题目')
   // 确保用户已登录
@@ -486,6 +517,7 @@ onMounted(() => {
   fetchLatestProblems()
   fetchLatestAnnouncements()
   fetchLatestSolveRecords()
+  fetchUserStats()
 })
 </script>
 

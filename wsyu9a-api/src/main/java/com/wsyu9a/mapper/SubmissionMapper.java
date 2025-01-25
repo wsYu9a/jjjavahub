@@ -65,4 +65,11 @@ public interface SubmissionMapper {
             "ORDER BY s.submit_time DESC " +
             "LIMIT 5")
     List<SolveRecordDTO> getLatestSolveRecords();
+
+    /**
+     * 获取用户已解决的题目ID列表
+     */
+    @Select("SELECT DISTINCT problem_id FROM submission WHERE user_id = " +
+            "(SELECT id FROM sys_user WHERE username = #{username}) AND correct = true")
+    List<Long> findSolvedProblemIds(@Param("username") String username);
 } 

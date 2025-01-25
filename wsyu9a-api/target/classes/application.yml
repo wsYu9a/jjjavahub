@@ -37,7 +37,10 @@ mybatis:
 logging:
   level:
     com.wsyu9a: debug
-    org.springframework.web: DEBUG 
+    org.springframework.web: DEBUG
+    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: TRACE
+    org.springframework.transaction: TRACE
+    org.mybatis: TRACE
 
 jwt:
   secret: wsyu9a_jwt_secret_key_must_be_at_least_64_bytes_long_for_hs512_algorithm_security

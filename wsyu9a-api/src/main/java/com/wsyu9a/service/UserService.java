@@ -5,6 +5,7 @@ import com.wsyu9a.dto.UserDTO;
 import com.wsyu9a.entity.User;
 import com.wsyu9a.dto.LoginDTO;
 import com.wsyu9a.dto.LoginResponseDTO;
+import com.wsyu9a.dto.UserStatsDTO;
 
 public interface UserService {
     /**
@@ -45,4 +46,6 @@ public interface UserService {
      * @return 登录响应信息
      */
     LoginResponseDTO login(LoginDTO loginDTO);
+
+    UserStatsDTO getUserStats(String username);
 } 

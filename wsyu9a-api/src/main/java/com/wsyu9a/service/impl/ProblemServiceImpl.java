@@ -42,6 +42,7 @@ import com.wsyu9a.service.DockerService;
 import com.wsyu9a.dto.docker.DockerEnvDTO;
 import com.wsyu9a.mapper.UserMapper;
 import com.wsyu9a.entity.User;
+import com.wsyu9a.vo.ProblemVO;
 
 @Slf4j
 @Service
@@ -436,30 +437,33 @@ public class ProblemServiceImpl implements ProblemService {
     }
 
     @Override
-    @Transactional
-    public void submitFlag(String username, Long problemId, String flag) {
-        // 获取用户
+    @Transactional(rollbackFor = Exception.class)
+    public boolean submitFlag(String username, Long problemId, String flag) {
+        log.info("开始处理提交: username={}, problemId={}", username, problemId);
+        
+        // 获取用户信息
         User user = userMapper.findByUsername(username);
         if (user == null) {
+            log.warn("用户不存在: {}", username);
             throw new BusinessException("用户不存在");
         }
-        
-        // 获取题目
+        log.info("用户信息: id={}, username={}", user.getId(), user.getUsername());
+
+        // 获取题目信息
         Problem problem = problemMapper.findById(problemId);
         if (problem == null) {
+            log.warn("题目不存在: {}", problemId);
             throw new BusinessException("题目不存在");
         }
-        
-        // 检查是否已经解决过
-        if (submissionMapper.hasSolved(username, problemId)) {
-            throw new BusinessException("你已经解决过这道题目");
-        }
-        
+        log.info("题目信息: id={}, title={}", problem.getId(), problem.getTitle());
+
         // 获取容器环境变量中的flag
         DockerEnvDTO env = dockerService.getEnvironmentStatus(problemId);
         if (env == null || !"running".equals(env.getStatus())) {
+            log.warn("题目环境未运行: problemId={}, envStatus={}", problemId, env != null ? env.getStatus() : "null");
             throw new BusinessException("请先启动题目环境");
         }
+        log.info("环境状态: problemId={}, status={}", problemId, env.getStatus());
 
         // 验证flag
         String envFlag = env.getFlag();
@@ -467,29 +471,72 @@ public class ProblemServiceImpl implements ProblemService {
             log.error("题目 {} 的环境变量中没有flag", problemId);
             throw new BusinessException("题目环境异常，请联系管理员");
         }
-        
+
+        // 检查flag是否正确
         boolean isCorrect = envFlag.equals(flag);
-        
-        // 记录提交
-        Submission submission = Submission.builder()
-            .userId(user.getId())
-            .problemId(problemId)
-            .flag(flag)
-            .correct(isCorrect)
-            .submitTime(LocalDateTime.now())
-            .build();
-        
-        submissionMapper.insert(submission);
-        
-        if (!isCorrect) {
-            throw new BusinessException("Flag不正确");
+        log.info("Flag验证结果: problemId={}, isCorrect={}", problemId, isCorrect);
+
+        // 如果flag正确，先检查是否已经解决过
+        if (isCorrect) {
+            boolean hasSolved = submissionMapper.hasSolved(username, problemId);
+            log.info("检查是否已解决: username={}, problemId={}, hasSolved={}", username, problemId, hasSolved);
+            if (hasSolved) {
+                throw new BusinessException("你已经解决过这道题目了");
+            }
         }
+
+        // 创建提交记录
+        Submission submission = new Submission();
+        submission.setUserId(user.getId());
+        submission.setProblemId(problemId);
+        submission.setFlag(flag);
+        submission.setSubmitTime(LocalDateTime.now());
+        submission.setCorrect(isCorrect);
         
-        // 更新用户分数
-        user.setScore(user.getScore() + problem.getScore());
-        userMapper.updateScore(user.getId(), user.getScore());
+        // 保存提交记录并更新题目统计
+        log.info("保存提交记录: userId={}, problemId={}, correct={}", user.getId(), problemId, isCorrect);
+        submissionMapper.insert(submission);
+        log.info("提交记录已保存: submissionId={}", submission.getId());
         
-        // 更新题目统计信息
-        problemMapper.updateStatistics(problemId);
+        log.info("更新题目提交次数: problemId={}", problemId);
+        problemMapper.updateStatistics(problemId);  // 增加提交次数
+
+        // 如果flag正确，更新用户积分和解决次数
+        if (isCorrect) {
+            Integer currentScore = user.getScore() != null ? user.getScore() : 0;
+            Integer problemScore = problem.getScore() != null ? problem.getScore() : 0;
+            log.info("更新用户积分: userId={}, oldScore={}, addScore={}", user.getId(), currentScore, problemScore);
+            userMapper.updateScore(user.getId(), currentScore + problemScore);
+            
+            log.info("更新题目解决次数: problemId={}", problemId);
+            problemMapper.updateStatistics2(problemId);  // 增加解决次数
+        }
+
+        log.info("提交处理完成: username={}, problemId={}, isCorrect={}", username, problemId, isCorrect);
+        return isCorrect;
+    }
+
+    @Override
+    public PageResult<ProblemVO> getUserProblems(String username, Integer pageNum, Integer pageSize,
+            String searchKey, Long categoryId, String difficulty) {
+        log.info("获取用户题目列表: username={}, pageNum={}, pageSize={}", username, pageNum, pageSize);
+        
+        int offset = (pageNum - 1) * pageSize;
+        
+        List<ProblemVO> problems = problemMapper.findUserProblems(offset, pageSize, searchKey, categoryId, difficulty);
+        log.info("查询到题目数量: {}", problems.size());
+        
+        List<Long> solvedProblemIds = submissionMapper.findSolvedProblemIds(username);
+        log.info("用户已解决题目数量: {}", solvedProblemIds.size());
+        
+        problems.forEach(problem -> {
+            boolean solved = solvedProblemIds.contains(problem.getId());
+            problem.setSolved(solved);
+            log.debug("题目 {} solved状态: {}", problem.getId(), solved);
+        });
+        
+        int total = problemMapper.countUserProblems(searchKey, categoryId, difficulty);
+        
+        return new PageResult<>(problems, total, pageSize, pageNum);
     }
 } 

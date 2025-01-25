@@ -45,3 +45,11 @@ export function resetPassword(data) {
     }
   })
 }
+
+// 获取用户统计信息
+export function getUserStats() {
+  return request({
+    url: '/api/user/stats',
+    method: 'get'
+  })
+}

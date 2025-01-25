@@ -142,17 +142,24 @@ const queryParams = ref({
 
 // 获取题目列表
 const getList = async () => {
-  loading.value = true
   try {
+    loading.value = true
     const params = {
-      ...queryParams.value,
-      categoryId: queryParams.value.categoryId || null,
-      difficulty: queryParams.value.difficulty || null
+      pageNum: queryParams.value.pageNum,
+      pageSize: queryParams.value.pageSize,
+      searchKey: queryParams.value.searchKey || undefined,
+      categoryId: queryParams.value.categoryId || undefined,
+      difficulty: queryParams.value.difficulty || undefined
     }
+    
     const res = await getUserProblemList(params)
     if (res.code === 200) {
       problemList.value = res.data.records
       total.value = res.data.total
+      
+      // 打印日志，检查数据
+      console.log('题目列表:', problemList.value)
+      console.log('solved状态:', problemList.value.map(p => p.solved))
     }
   } catch (error) {
     console.error('获取题目列表失败:', error)

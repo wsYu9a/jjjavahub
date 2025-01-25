@@ -4,6 +4,7 @@ import com.wsyu9a.entity.User;
 import com.wsyu9a.dto.RankingDTO;
 import org.apache.ibatis.annotations.*;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface UserMapper {
@@ -67,4 +68,56 @@ public interface UserMapper {
             "ORDER BY u.score DESC, solved_count DESC " +
             "LIMIT 100")
     List<RankingDTO> getRankingList();
+    
+    @Select("SELECT COUNT(DISTINCT problem_id) " +
+            "FROM submission " +
+            "WHERE user_id = (SELECT id FROM sys_user WHERE username = #{username}) " +
+            "AND correct = true")
+    int getSolvedCount(@Param("username") String username);
+    
+    @Select("SELECT score FROM sys_user WHERE username = #{username}")
+    Integer getScore(@Param("username") String username);
+    
+    @Select("SELECT COUNT(*) + 1 FROM sys_user " +
+            "WHERE score > (SELECT score FROM sys_user WHERE username = #{username}) " +
+            "AND deleted = 0")
+    Integer getRank(@Param("username") String username);
+
+    /**
+     * 获取用户排名
+     */
+    @Select("SELECT COUNT(*) + 1 FROM sys_user WHERE score > (" +
+            "SELECT score FROM sys_user WHERE username = #{username})")
+    Integer getUserRanking(@Param("username") String username);
+
+    /**
+     * 获取用户解题统计
+     */
+    @Select("SELECT COUNT(DISTINCT problem_id) as solved_count, COUNT(*) as submit_count " +
+            "FROM submission WHERE user_id = (" +
+            "SELECT id FROM sys_user WHERE username = #{username})")
+    Map<String, Integer> getUserSubmitStats(@Param("username") String username);
+
+    /**
+     * 获取用户各难度解题数量
+     */
+    @Select("SELECT p.difficulty, COUNT(DISTINCT s.problem_id) as count " +
+            "FROM submission s " +
+            "JOIN problem p ON s.problem_id = p.id " +
+            "WHERE s.user_id = (SELECT id FROM sys_user WHERE username = #{username}) " +
+            "AND s.correct = true " +
+            "GROUP BY p.difficulty")
+    List<Map<String, Object>> getDifficultyStats(@Param("username") String username);
+
+    /**
+     * 获取用户各分类解题数量
+     */
+    @Select("SELECT pc.name, COUNT(DISTINCT s.problem_id) as count " +
+            "FROM submission s " +
+            "JOIN problem p ON s.problem_id = p.id " +
+            "JOIN problem_category pc ON p.category_id = pc.id " +
+            "WHERE s.user_id = (SELECT id FROM sys_user WHERE username = #{username}) " +
+            "AND s.correct = true " +
+            "GROUP BY pc.id, pc.name")
+    List<Map<String, Object>> getCategoryStats(@Param("username") String username);
 } 

@@ -60,12 +60,9 @@ public class Problem {
     @Column(name = "category_name")
     private String categoryName;
 
-    @Column(name = "submit_count", nullable = false)
-    private Integer submitCount;
+    @Column(name = "submit_count")
+    private Integer submitCount = 0;
 
-    @Column(name = "solved_count", nullable = false)
-    private Integer solvedCount;
-
-    @Column(name = "pass_rate", nullable = false)
-    private String passRate;
+    @Column(name = "solved_count")
+    private Integer solvedCount = 0;
 } 

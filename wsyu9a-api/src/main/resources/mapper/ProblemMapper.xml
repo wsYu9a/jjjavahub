@@ -33,4 +33,45 @@
             #{updateTime}
         )
     </insert>
+
+    <resultMap id="ProblemResultMap" type="com.wsyu9a.entity.Problem">
+        <!-- 添加所有字段的映射 -->
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="difficulty" property="difficulty"/>
+        <result column="score" property="score"/>
+        <result column="flag" property="flag"/>
+        <result column="summary" property="summary"/>
+        <result column="detail" property="detail"/>
+        <result column="docker_compose_path" property="dockerComposePath"/>
+        <result column="attachment_path" property="attachmentPath"/>
+        <result column="enabled" property="enabled"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="category_name" property="categoryName"/>
+        <result column="submit_count" property="submitCount"/>
+        <result column="solved_count" property="solvedCount"/>
+    </resultMap>
+
+    <select id="findById" resultMap="ProblemResultMap">
+        SELECT p.*,
+               pc.name as category_name,
+               (SELECT COUNT(*) FROM submission s WHERE s.problem_id = p.id) as submit_count,
+               (SELECT COUNT(DISTINCT user_id) FROM submission s 
+                WHERE s.problem_id = p.id AND s.correct = true) as solved_count
+        FROM problem p
+        LEFT JOIN problem_category pc ON p.category_id = pc.id
+        WHERE p.id = #{id} AND p.deleted = 0
+    </select>
+
+    <select id="findPublicById" resultMap="ProblemResultMap">
+        SELECT p.id, p.title, p.category_id, p.difficulty, p.score,
+               p.summary, p.detail, p.flag, p.docker_compose_path, p.attachment_path,
+               p.enabled, p.create_time, pc.name as category_name,
+               p.submit_count, p.solved_count
+        FROM problem p
+        LEFT JOIN problem_category pc ON p.category_id = pc.id
+        WHERE p.id = #{id} AND p.enabled = true
+    </select>
 </mapper> 

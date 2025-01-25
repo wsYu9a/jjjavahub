@@ -86,21 +86,7 @@
                     {{ row.solved }}
                   </el-tag>
                 </el-tooltip>
-                <el-tooltip content="简单题">
-                  <el-tag type="success" effect="plain">
-                    {{ row.solvedByDifficulty?.easy || 0 }}
-                  </el-tag>
-                </el-tooltip>
-                <el-tooltip content="中等题">
-                  <el-tag type="warning" effect="plain">
-                    {{ row.solvedByDifficulty?.medium || 0 }}
-                  </el-tag>
-                </el-tooltip>
-                <el-tooltip content="困难题">
-                  <el-tag type="danger" effect="plain">
-                    {{ row.solvedByDifficulty?.hard || 0 }}
-                  </el-tag>
-                </el-tooltip>
+                
               </div>
             </template>
           </el-table-column>

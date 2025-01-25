@@ -17,6 +17,13 @@ import com.wsyu9a.dto.LoginDTO;
 import com.wsyu9a.util.JwtUtil;
 import com.wsyu9a.dto.LoginResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.wsyu9a.dto.UserStatsDTO;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import com.wsyu9a.dto.SolveRecordDTO;
+import com.wsyu9a.mapper.SubmissionMapper;
+import java.util.ArrayList;
 
 @Slf4j
 @Service
@@ -27,6 +34,7 @@ public class UserServiceImpl implements UserService {
     private UserMapper userMapper;
     
     private final JwtUtil jwtUtil;
+    private final SubmissionMapper submissionMapper;
 
     @Override
     @Transactional
@@ -164,5 +172,84 @@ public class UserServiceImpl implements UserService {
             log.error("登录过程发生异常，用户名: " + loginDTO.getUsername(), e);
             throw new BusinessException("登录失败，请稍后重试");
         }
+    }
+
+    @Override
+    public UserStatsDTO getUserStats(String username) {
+        // 获取用户基本信息
+        User user = userMapper.findByUsername(username);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        // 获取排名
+        Integer ranking = userMapper.getUserRanking(username);
+
+        // 获取提交统计
+        Map<String, Integer> submitStats = userMapper.getUserSubmitStats(username);
+        
+        // 安全地获取提交统计数据
+        Integer solvedCount = 0;
+        Integer submitCount = 0;
+        if (submitStats != null) {
+            Object solved = submitStats.get("solved_count");
+            Object submit = submitStats.get("submit_count");
+            
+            solvedCount = (solved instanceof Long) ? ((Long) solved).intValue() :
+                         (solved instanceof Integer) ? (Integer) solved : 0;
+                         
+            submitCount = (submit instanceof Long) ? ((Long) submit).intValue() :
+                         (submit instanceof Integer) ? (Integer) submit : 0;
+        }
+
+        // 获取难度统计
+        List<Map<String, Object>> difficultyList = userMapper.getDifficultyStats(username);
+        Map<String, Integer> difficultyStats = difficultyList.stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("difficulty"),
+                m -> {
+                    Object count = m.get("count");
+                    return (count instanceof Long) ? ((Long) count).intValue() :
+                           (count instanceof Integer) ? (Integer) count : 0;
+                }
+            ));
+
+        // 获取分类统计
+        List<Map<String, Object>> categoryList = userMapper.getCategoryStats(username);
+        Map<String, Integer> categoryStats = categoryList.stream()
+            .collect(Collectors.toMap(
+                m -> (String) m.get("name"),
+                m -> {
+                    Object count = m.get("count");
+                    return (count instanceof Long) ? ((Long) count).intValue() :
+                           (count instanceof Integer) ? (Integer) count : 0;
+                }
+            ));
+
+        // 获取最近解题记录
+        List<SolveRecordDTO> recentSolves = submissionMapper.getLatestSolveRecords();
+
+        List<SolveRecordDTO> recentSolves2 = new ArrayList<>();
+
+        for (SolveRecordDTO record : recentSolves) {
+            if (user.getUsername().equals(record.getUsername())) {
+                recentSolves2.add(record);
+            }
+        }
+
+
+        return UserStatsDTO.builder()
+            .username(user.getUsername())
+            .role(user.getRole())
+            .avatar(user.getAvatar())
+            .joinTime(user.getCreateTime())
+            .totalScore(user.getScore())
+            .ranking(ranking)
+            .solvedCount(solvedCount)  // 使用安全转换后的值
+            .submitCount(submitCount)  // 使用安全转换后的值
+            .difficultyStats(difficultyStats)
+            .categoryStats(categoryStats)
+            .recentSolves(recentSolves2)
+            .build();
     }
 }

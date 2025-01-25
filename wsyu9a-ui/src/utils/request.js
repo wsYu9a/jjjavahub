@@ -15,13 +15,11 @@ const request = axios.create({
 // 请求拦截器
 request.interceptors.request.use(
   config => {
-    // 打印请求信息
-    console.log('Request:', {
+    console.log('[Request Interceptor] 请求配置', {
       url: config.url,
       method: config.method,
-      headers: config.headers,
       data: config.data,
-      params: config.params
+      headers: config.headers
     })
 
     // 定义不需要token的接口列表
@@ -42,7 +40,7 @@ request.interceptors.request.use(
     return config
   },
   error => {
-    console.error('Request error:', error)
+    console.error('[Request Interceptor] 请求错误', error)
     return Promise.reject(error)
   }
 )
@@ -50,43 +48,65 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
-    // 打印响应信息
-    console.log('Response:', {
+    // 添加请求标识，避免重复处理
+    if (response.config._handled) {
+      console.log('[Response Interceptor] 响应已处理，跳过', {
+        url: response.config.url,
+        _handled: response.config._handled
+      })
+      return response.data
+    }
+
+    console.log('[Response Interceptor] 响应数据', {
       url: response.config.url,
       status: response.status,
-      data: response.data
+      data: response.data,
+      timestamp: Date.now()
     })
 
+    // 标记该响应已被处理
+    response.config._handled = true
+
+    // 只处理HTTP错误，业务错误直接返回
     const res = response.data
-    
-    if (res.code !== 200) {
-      // 401: 未登录或token过期
-      if (res.code === 401) {
-        // 清除本地存储的用户信息
-        localStorage.removeItem('token')
-        localStorage.removeItem('username')
-        localStorage.removeItem('role')
-        
-        // 只在需要登录的页面显示过期提示
-        const publicPages = ['/login', '/register', '/reset-password']
-        if (!publicPages.includes(window.location.pathname)) {
-          ElMessage.error('登录已过期，请重新登录')
-          router.push('/login')
-        }
-      } else {
-        ElMessage.error(res.message || '请求失败')
+    if (res.code === 401) {
+      // 清除本地存储的用户信息
+      localStorage.removeItem('token')
+      localStorage.removeItem('username')
+      localStorage.removeItem('role')
+      
+      // 只在需要登录的页面显示过期提示
+      const publicPages = ['/login', '/register', '/reset-password']
+      if (!publicPages.includes(window.location.pathname)) {
+        ElMessage.error('登录已过期，请重新登录')
+        router.push('/login')
       }
-      return Promise.reject(new Error(res.message || '请求失败'))
+      return Promise.reject(new Error('登录已过期'))
     }
+    
     return res
   },
   error => {
-    // 打印错误信息
-    console.error('Response error:', {
+    // 如果错误已经被处理过，直接返回
+    if (error.config?._handled) {
+      console.log('[Response Interceptor] 错误已处理，跳过', {
+        url: error.config?.url,
+        _handled: error.config?._handled
+      })
+      return Promise.reject(error)
+    }
+
+    // 标记错误已被处理
+    if (error.config) {
+      error.config._handled = true
+    }
+
+    // 只处理HTTP错误
+    console.error('[Response Interceptor] 响应错误', {
       url: error.config?.url,
       status: error.response?.status,
-      message: error.message,
-      data: error.response?.data
+      data: error.response?.data,
+      timestamp: Date.now()
     })
 
     if (error.response?.status === 401) {
@@ -101,8 +121,6 @@ request.interceptors.response.use(
         ElMessage.error('登录已过期，请重新登录')
         router.push('/login')
       }
-    } else {
-      ElMessage.error(error.response?.data?.message || error.message || '网络错误')
     }
     return Promise.reject(error)
   }
