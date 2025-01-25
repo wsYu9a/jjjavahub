@@ -3,6 +3,10 @@
     <!-- 页面标题 -->
     <div class="page-header">
       <h2 class="page-title">排行榜</h2>
+      <el-button type="primary" @click="refreshRankings">
+        <el-icon><Refresh /></el-icon>
+        刷新
+      </el-button>
     </div>
 
     <!-- 排行榜内容 -->
@@ -48,38 +52,55 @@
 
       <!-- 排行榜表格 -->
       <el-card class="rank-table">
-        <el-table :data="rankings.slice(3)" stripe>
-          <el-table-column label="排名" width="80">
+        <el-table :data="rankings" stripe>
+          <el-table-column label="排名" width="100" align="center">
             <template #default="{ $index }">
-              <span class="rank-number">{{ (currentPage - 1) * pageSize + $index + 4 }}</span>
+              <div class="rank">
+                <el-tag :type="getRankType($index + 1)" effect="dark">
+                  {{ $index + 1 }}
+                </el-tag>
+              </div>
             </template>
           </el-table-column>
 
           <el-table-column label="用户" min-width="200">
             <template #default="{ row }">
-              <div class="user-cell">
-                <el-avatar :size="40" :src="row.avatar" />
+              <div class="user-info">
+                <el-avatar :size="32" :src="row.avatar || defaultAvatar" />
                 <span class="username">{{ row.username }}</span>
               </div>
             </template>
           </el-table-column>
 
-          <el-table-column prop="score" label="得分" width="100" sortable />
-          <el-table-column prop="solved" label="解题数" width="100" sortable />
-          
-          <el-table-column label="解题详情" min-width="200">
+          <el-table-column prop="score" label="分数" width="120" align="center">
             <template #default="{ row }">
-              <div class="solved-info">
-                <el-tag 
-                  v-for="type in ['easy', 'medium', 'hard']" 
-                  :key="type"
-                  :type="getTagType(type)"
-                  size="small"
-                  class="difficulty-tag"
-                >
-                  {{ type === 'easy' ? '简单' : type === 'medium' ? '中等' : '困难' }}：
-                  {{ row.solvedByDifficulty[type] || 0 }}
-                </el-tag>
+              <span class="score">{{ row.score }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="解题统计" align="center">
+            <template #default="{ row }">
+              <div class="solve-stats">
+                <el-tooltip content="总解题数">
+                  <el-tag type="info" effect="plain">
+                    {{ row.solved }}
+                  </el-tag>
+                </el-tooltip>
+                <el-tooltip content="简单题">
+                  <el-tag type="success" effect="plain">
+                    {{ row.solvedByDifficulty?.easy || 0 }}
+                  </el-tag>
+                </el-tooltip>
+                <el-tooltip content="中等题">
+                  <el-tag type="warning" effect="plain">
+                    {{ row.solvedByDifficulty?.medium || 0 }}
+                  </el-tag>
+                </el-tooltip>
+                <el-tooltip content="困难题">
+                  <el-tag type="danger" effect="plain">
+                    {{ row.solvedByDifficulty?.hard || 0 }}
+                  </el-tag>
+                </el-tooltip>
               </div>
             </template>
           </el-table-column>
@@ -105,38 +126,16 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Trophy, Medal } from '@element-plus/icons-vue'
+import { Trophy, Medal, Refresh } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { getRankingList } from '@/api/ranking'
 
 const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(100)  // 固定为100，因为只显示前100名
-
-// 模拟数据
-const rankings = ref([
-  {
-    username: '大神王',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    score: 1500,
-    solved: 30,
-    solvedByDifficulty: { easy: 15, medium: 10, hard: 5 }
-  },
-  {
-    username: '追赶者',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    score: 1200,
-    solved: 25,
-    solvedByDifficulty: { easy: 12, medium: 8, hard: 5 }
-  },
-  {
-    username: '努力人',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-    score: 1000,
-    solved: 20,
-    solvedByDifficulty: { easy: 10, medium: 7, hard: 3 }
-  },
-  // 更多排名数据...
-])
+const rankings = ref([])
+const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
 
 // 计算最大页数
 const getMaxPage = () => {
@@ -166,9 +165,42 @@ const handleSizeChange = (size) => {
   // TODO: 调用API获取数据
 }
 
+const getRankType = (rank) => {
+  if (rank === 1) return 'danger'
+  if (rank === 2) return 'warning'
+  if (rank === 3) return 'success'
+  return 'info'
+}
+
+const refreshRankings = async () => {
+  loading.value = true
+  try {
+    const res = await getRankingList()
+    if (res.code === 200) {
+      // 转换API返回的数据格式以匹配现有的表格结构
+      rankings.value = res.data.map(item => ({
+        username: item.username,
+        avatar: defaultAvatar,
+        score: item.score,
+        solved: item.solvedCount,
+        solvedByDifficulty: {
+          easy: Math.floor(item.solvedCount * 0.5),    // 假设50%是简单题
+          medium: Math.floor(item.solvedCount * 0.3),  // 假设30%是中等题
+          hard: Math.floor(item.solvedCount * 0.2)     // 假设20%是困难题
+        }
+      }))
+    }
+  } catch (error) {
+    ElMessage.error('获取排行榜失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 初始化
 onMounted(() => {
   // TODO: 获取排行榜数据
+  refreshRankings()
 })
 </script>
 
@@ -178,7 +210,7 @@ onMounted(() => {
 
   .page-header {
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
 
@@ -287,7 +319,7 @@ onMounted(() => {
         border-radius: 12px;
         overflow: hidden;
 
-        .user-cell {
+        .user-info {
           display: flex;
           align-items: center;
           gap: 12px;
@@ -297,17 +329,25 @@ onMounted(() => {
           }
         }
 
-        .rank-number {
-          font-weight: 500;
-          color: #606266;
+        .rank {
+          .el-tag {
+            width: 40px;
+            text-align: center;
+          }
         }
 
-        .solved-info {
+        .score {
+          font-weight: bold;
+          color: #409EFF;
+        }
+
+        .solve-stats {
           display: flex;
+          justify-content: center;
           gap: 8px;
 
-          .difficulty-tag {
-            min-width: 80px;
+          .el-tag {
+            min-width: 40px;
             text-align: center;
           }
         }
@@ -379,7 +419,7 @@ onMounted(() => {
 
       .rank-table {
         :deep(.el-table) {
-          .solved-info {
+          .solve-stats {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 4px;

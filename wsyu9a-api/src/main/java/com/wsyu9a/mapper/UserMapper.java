@@ -1,6 +1,7 @@
 package com.wsyu9a.mapper;
 
 import com.wsyu9a.entity.User;
+import com.wsyu9a.dto.RankingDTO;
 import org.apache.ibatis.annotations.*;
 import java.util.List;
 
@@ -58,4 +59,12 @@ public interface UserMapper {
     
     @Update("UPDATE sys_user SET score = #{score} WHERE id = #{userId}")
     void updateScore(@Param("userId") Long userId, @Param("score") Integer score);
+    
+    @Select("SELECT u.username, u.score, " +
+            "(SELECT COUNT(*) FROM submission s WHERE s.user_id = u.id AND s.correct = true) as solved_count " +
+            "FROM sys_user u " +
+            "WHERE u.deleted = 0 AND u.enabled = true " +
+            "ORDER BY u.score DESC, solved_count DESC " +
+            "LIMIT 100")
+    List<RankingDTO> getRankingList();
 } 
