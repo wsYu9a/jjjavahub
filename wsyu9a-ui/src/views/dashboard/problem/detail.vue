@@ -229,7 +229,7 @@ import {
   Download,
   CopyDocument
 } from '@element-plus/icons-vue'
-import { getUserProblemDetail, getProblemReadme, startProblemEnv, stopProblemEnv, getProblemEnvStatus, submitFlag } from '@/api/problem'
+import { getUserProblemDetail, getProblemReadme, downloadFujian, startProblemEnv, stopProblemEnv, getProblemEnvStatus, submitFlag } from '@/api/problem'
 import { marked } from 'marked'
 import 'github-markdown-css'
 import { debounce } from 'lodash-es'
@@ -543,10 +543,37 @@ onBeforeUnmount(() => {
   debouncedSubmit.cancel()
 })
 
-const downloadFile = (file) => {
-  
-  ElMessage.success(`开始下载：${file.url}`)
-}
+const downloadFile = async (file) => {
+  try {
+    // 调用获取文件内容的 API 请求
+    const res = await downloadFujian(file.url);
+
+    if (res.code === 200) {
+      // 获取文件内容
+      const fileContent = res.data;
+      const byteArray = new Uint8Array(fileContent.split("").map(c => c.charCodeAt(0))); // 将解码后的字符串转成字节数组
+
+      // 创建 Blob 对象用于文件下载
+      const blob = new Blob([byteArray], {
+        type: 'application/octet-stream', // 你可以根据实际文件类型调整 MIME 类型
+      });
+
+      // 创建下载链接并触发下载
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = file.name; // 设置文件名为传入的文件路径或文件名
+      link.click(); // 触发下载
+
+      ElMessage.success('文件下载成功');
+    } else {
+      throw new Error(res.message);
+    }
+  } catch (error) {
+    console.error('获取文件内容失败:', error);
+    ElMessage.error('下载文件时出错');
+  }
+};
+
 
 const copyUrl = () => {
   navigator.clipboard.writeText(envUrl.value)

@@ -38,6 +38,8 @@ public interface ProblemService {
      */
     String getReadmeContent(String path) throws IOException;
 
+    String getFujianContent(String path) throws IOException;
+
     /**
      * 提交flag
      * @param username 用户名

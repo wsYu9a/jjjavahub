@@ -134,7 +134,7 @@
             <el-card v-if="attachments.length > 0" class="attachments-card">
               <template #header>
                 <div class="card-header">
-                  <h3>附件下载</h3>
+                  <h3>附件下载2</h3>
                 </div>
               </template>
               

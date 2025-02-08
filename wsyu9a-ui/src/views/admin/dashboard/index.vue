@@ -40,84 +40,86 @@
         </el-col>
       </el-row>
     </div>
-    <el-col :span="6">
-              <el-card class="solve-dynamics">
-                <template #header>
-                  <div class="card-header">
-                    <h3>解题动态</h3>
-                  </div>
-                </template>
-                <div class="dynamics-list">
-                  <template v-for="item in solveDynamics" :key="item.id">
-                    <div class="dynamic-item">
-                      <div class="dynamic-content">
-                        <span class="username">{{ item.username }}</span>
-                        <span class="time">{{ item.solveTime }}</span>
-                        <span class="action">解决了</span>
-                        <span 
-                          class="problem-title" 
-                          @click="handleProblemClick(item.problemId)"
-                        >
-                          {{ item.problemTitle }}
-                        </span>
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </el-card>
-            </el-col>
 
-    <el-form-item label="头像">
-      <el-upload
-        class="avatar-uploader"
-        action="/api/user/upload/avatar"
-        :show-file-list="false"
-        :on-success="handleAvatarSuccess"
-        :before-upload="beforeAvatarUpload"
-        :headers="{ Authorization: `Bearer ${localStorage.getItem('token')}` }"
-      >
-        <img 
-          v-if="editForm.avatar" 
-          :src="editForm.avatar" 
-          class="avatar" 
-          alt="用户头像" 
+    <!-- 添加排行榜表格 -->
+    <el-card class="rank-table">
+      <template #header>
+        <div class="card-header">
+          <h3>解题统计</h3>
+        </div>
+      </template>
+      <el-table :data="rankings" stripe>
+        <el-table-column label="排名" width="100" align="center">
+          <template #default="{ $index }">
+            <div class="rank">
+              <el-tag :type="getRankType($index + 1)" effect="dark">
+                {{ $index + 1 }}
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="用户" min-width="200">
+          <template #default="{ row }">
+            <div class="user-info">
+              <el-avatar :size="32" :src="'data:image/jpeg;base64,' + (row.avatar || defaultAvatar)" />
+              <span class="username">{{ row.username }}</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="score" label="分数" width="120" align="center">
+          <template #default="{ row }">
+            <span class="score">{{ row.score }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="解题统计" align="center">
+          <template #default="{ row }">
+            <div class="solve-stats">
+              <el-tooltip content="总解题数">
+                <el-tag type="info" effect="plain">
+                  {{ row.solvedCount }}
+                </el-tag>
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页器 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          :max-page="getMaxPage()"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
         />
-        <img 
-          v-else 
-          src="https://img2020.cnblogs.com/blog/1993669/202105/1993669-20210523191357495-836628456.png"
-          class="avatar" 
-          alt="默认头像" 
-        />
-        <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-      </el-upload>
-      <div class="upload-tip">
-        支持 jpg 格式，大小不超过 2MB
       </div>
-    </el-form-item>
+    </el-card>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getDashboardStats } from '@/api/admin';
-import { getLatestSolveRecords } from '@/api/solve-records'
-import { User, Document, Folder, Bell, Plus } from '@element-plus/icons-vue'
-import dayjs from 'dayjs'
+import { getDashboardStats, getRankingList } from '@/api/admin';
+import { User, Document, Folder, Bell } from '@element-plus/icons-vue'
 
 const stats = ref({
   userCount: 0,
   problemCount: 0,
   categoryCount: 0,
-  announcementCount: 0
+  announcementCount: 0,
 })
 
-const solveDynamics = ref([])
-
-const recentSolves = ref([])
-
-const editForm = ref({
-  avatar: ''
-})
+const rankings = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 
 const fetchDashboardStats = async () => {
   try {
@@ -132,59 +134,34 @@ const fetchDashboardStats = async () => {
   }
 }
 
-const fetchRecentSolves = async () => {
+const fetchRankings = async () => {
   try {
-    const response = await getLatestSolveRecords()
+    const response = await getRankingList()
     if (response.code === 200) {
-      recentSolves.value = response.data
+      rankings.value = response.data
+      total.value = rankings.value.length; // 更新总数
     } else {
-      console.error('Failed to fetch recent solves')
+      console.error('Failed to fetch rankings')
     }
   } catch (error) {
-    console.error('Error fetching recent solves:', error)
-  }
-}
-
-// 获取最新解题记录
-const fetchLatestSolveRecords = async () => {
-  try {
-    const res = await getLatestSolveRecords()
-    if (res.code === 200) {
-      solveDynamics.value = res.data.map(record => ({
-        username: record.username,
-        problemId: record.problemId,
-        problemTitle: record.problemTitle,
-        solveTime: formatRelativeTime(record.solveTime)
-      }))
-    }
-  } catch (error) {
-    console.error('获取解题动态失败:', error)
-    ElMessage.error('获取解题动态失败')
+    console.error('Error fetching rankings:', error)
   }
 }
 
 onMounted(() => {
   fetchDashboardStats()
-  fetchRecentSolves()
+  fetchRankings()
 })
 
-const formatDate = (date) => {
-  if (!date) return '-'
-  return dayjs(date).format('YYYY-MM-DD HH:mm')
+const getRankType = (rank) => {
+  if (rank === 1) return 'danger'
+  if (rank === 2) return 'warning'
+  if (rank === 3) return 'success'
+  return 'info'
 }
 
-const getDifficultyType = (difficulty) => {
-  const types = {
-    'EASY': 'success',
-    'MEDIUM': 'warning',
-    'HARD': 'danger'
-  }
-  return types[difficulty] || 'info'
-}
-
-const formatProblemTitle = (title) => {
-  // 假设题目标题格式为 "比赛名称 年份 题目名称"
-  return title.replace(/(\d{4})/, '$1 ')
+const getMaxPage = () => {
+  return Math.ceil(total.value / pageSize.value);
 }
 </script>
 
@@ -228,18 +205,27 @@ const formatProblemTitle = (title) => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.recent-solves {
+.rank-table {
   margin-top: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.card-header {
-  font-size: 18px;
+.rank-table .el-table {
+  border: none;
+}
+
+.rank-table .el-table th {
+  background-color: #f5f7fa;
+  color: #606266;
+}
+
+.rank-table .el-table td {
+  color: #303133;
+}
+
+.rank-table .el-tag {
   font-weight: bold;
 }
-
-.avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-}
-</style> 
+</style>

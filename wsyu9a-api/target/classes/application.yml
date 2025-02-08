@@ -52,7 +52,7 @@ problem:
   upload:
     readme-path: ${user.dir}/upload/readme  # 使用项目根目录下的 upload/readme 目录 
     attachment-path: ${user.dir}/upload/fujian  # 附件上传路径
-    avatar: ${user.dir}/upload/avatar
+#    avatar: ${user.dir}/upload/avatar
 
 # Docker配置
 docker:
@@ -61,6 +61,6 @@ docker:
     default-timeout: 300
     max-containers: 50
     auto-clean: true
-  host: containerPort
+  host: 127.0.0.1
   env:
     expire-minutes: 30  # 环境过期时间（分钟） 

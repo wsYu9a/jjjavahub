@@ -123,6 +123,13 @@ export function getProblemReadme(path) {
   })
 }
 
+export function downloadFujian(path) {
+  return request({
+    url: `/api/problems/fujian/${btoa(encodeURIComponent(path))}`,
+    method: 'get'
+  })
+}
+
 // 获取最新题目列表
 export function getLatestProblems(params) {
   return request({

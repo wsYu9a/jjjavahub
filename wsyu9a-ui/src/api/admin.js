@@ -70,4 +70,19 @@ export function setRoleStatus(data) {
     method: 'put',
     data
   })
+}
+
+// 确保这个函数存在
+export function getRankingList() {
+  return request({
+    url: '/api/ranking', // 确保这个 URL 是正确的
+    method: 'get'
+  });
 } 
+
+export function getUserStats() {
+  return request({
+    url: '/api/user/stats', // 确保这个 URL 是正确的
+    method: 'get'
+  });
+}
