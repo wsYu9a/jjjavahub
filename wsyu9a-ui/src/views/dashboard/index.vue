@@ -8,7 +8,7 @@
         @select="handleMenuSelect"
       >
         <div class="logo-container">
-          <span class="logo-text">WSYU OJ</span>
+          <span class="logo-text">wsYu9a-jjjavahub</span>
         </div>
         
         <el-menu-item index="home">
@@ -52,12 +52,12 @@
         <div class="user-info">
           <el-dropdown trigger="click">
             <div class="user-profile">
-              <el-avatar :size="32" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
+              
               <span class="username">{{ username }}</span>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="router.push('/profile')">
+                <el-dropdown-item @click="router.push('/dashboard?activeMenu=profile')">
                   <el-icon><User /></el-icon>个人中心
                 </el-dropdown-item>
                 <el-dropdown-item @click="router.push('/resetpwd')">
@@ -175,28 +175,29 @@
               </el-card>
             </el-col>
             <el-col :span="6">
-              <el-card class="recent-activity">
+              <el-card class="hot-problems">
                 <template #header>
                   <div class="card-header">
                     <h3>热门题目</h3>
                   </div>
                 </template>
-                <div class="hot-problems">
-                  <el-skeleton v-if="loading" :rows="5" animated />
-                  <template v-else>
-                    <div v-for="(item, index) in hotProblems" :key="item.id" class="hot-item">
-                      <div class="rank-number"># {{ index + 1 }}</div>
-                      <div class="problem-info">
-                        <div class="title" @click="handleProblemClick(item.id)">{{ item.title }}</div>
-                        <div class="stats">
-                          <el-tag size="small" :type="getDifficultyType(item.difficulty)">
-                            {{ getDifficultyLabel(item.difficulty) }}
-                          </el-tag>
-                          <span class="completion-rate">完成率 {{ item.completionRate }}%</span>
-                        </div>
+                <div class="problem-list">
+                  <div v-for="problem in hotProblems" :key="problem.id" class="problem-item">
+                    <div class="problem-info">
+                      <div class="title" @click="handleProblemClick(problem.id)">
+                        {{ problem.title }}
+                      </div>
+                      <div class="stats">
+                        <el-tag :type="getDifficultyType(problem.difficulty)" size="small">
+                          {{ problem.difficulty === 'EASY' ? '简单' : 
+                             problem.difficulty === 'MEDIUM' ? '中等' : '困难' }}
+                        </el-tag>
+                        <span class="submission-count">
+                          提交: {{ problem.submitCount || 0 }}次
+                        </span>
                       </div>
                     </div>
-                  </template>
+                  </div>
                 </div>
               </el-card>
               <!-- 公告模块 -->
@@ -279,7 +280,7 @@ import ProblemList from './problem/index.vue'
 import LeaderBoard from './leaderboard/index.vue'
 import UserProfile from './profile/index.vue'
 import dayjs from 'dayjs'
-import { getUserProblemList } from '@/api/problem'
+import { getUserProblemList, getHotProblems } from '@/api/problem'
 import request from '@/utils/request'
 import { getAnnouncementList } from '@/api/announcement'
 import { formatDateTime, formatTime } from '@/utils/format'
@@ -390,39 +391,20 @@ const switchToProblems = () => {
   activeMenuLabel.value = menuLabels['problems']
 }
 
-// 热门题目列表（Demo数据）
-const hotProblems = ref([
-  {
-    id: 1,
-    title: 'SQL注入基础',
-    difficulty: 'EASY',
-    completionRate: 85
-  },
-  {
-    id: 2,
-    title: 'XSS攻击入门',
-    difficulty: 'EASY',
-    completionRate: 78
-  },
-  {
-    id: 3,
-    title: '文件上传漏洞',
-    difficulty: 'MEDIUM',
-    completionRate: 65
-  },
-  {
-    id: 4,
-    title: 'PHP反序列化',
-    difficulty: 'MEDIUM',
-    completionRate: 52
-  },
-  {
-    id: 5,
-    title: 'RCE漏洞利用',
-    difficulty: 'HARD',
-    completionRate: 35
+// 热门题目列表
+const hotProblems = ref([])
+
+// 获取热门题目
+const fetchHotProblems = async () => {
+  try {
+    const res = await getHotProblems()
+    if (res.code === 200) {
+      hotProblems.value = res.data
+    }
+  } catch (error) {
+    console.error('获取热门题目失败:', error)
   }
-])
+}
 
 // 公告相关
 const latestAnnouncements = ref([])
@@ -518,6 +500,7 @@ onMounted(() => {
   fetchLatestAnnouncements()
   fetchLatestSolveRecords()
   fetchUserStats()
+  fetchHotProblems()
 })
 </script>
 
@@ -797,65 +780,136 @@ onMounted(() => {
 }
 
 .hot-problems {
-  .hot-item {
-    display: flex;
-    align-items: center;
-    padding: 14px 16px;
-    border-bottom: 1px solid #ebeef5;
-    transition: all 0.3s ease;
+  .problem-list {
+    height: 360px;
+    counter-reset: problem-index;
+    
+    .problem-item {
+      padding: 20px 16px;
+      border-bottom: 1px solid #ebeef5;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      height: 72px;
+      display: flex;
+      align-items: center;
 
-    &:last-child {
-      border-bottom: none;
-    }
-
-    &:hover {
-      background-color: #f5f7fa;
-    }
-
-    .rank-number {
-      width: 30px;
-      font-size: 16px;
-      font-weight: bold;
-      color: #909399;
-    }
-
-    .problem-info {
-      flex: 1;
-
-      .title {
-        font-size: 14px;
-        color: #303133;
-        margin-bottom: 6px;
-        cursor: pointer;
-
-        &:hover {
-          color: var(--el-color-primary);
-        }
+      &:last-child {
+        border-bottom: none;
       }
 
-      .stats {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+      &:hover {
+        background: linear-gradient(to right, #f5f7fa, #ffffff);
+        transform: translateX(4px);
+      }
 
-        .completion-rate {
-          font-size: 13px;
-          color: #67c23a;
+      &::before {
+        content: counter(problem-index);
+        counter-increment: problem-index;
+        width: 28px;
+        margin-right: 16px;
+        font-size: 20px;
+        font-weight: bold;
+        color: #909399;
+        text-align: center;
+      }
+
+      &:nth-child(1)::before {
+        color: #f56c6c;
+      }
+
+      &:nth-child(2)::before {
+        color: #e6a23c;
+      }
+
+      &:nth-child(3)::before {
+        color: #67c23a;
+      }
+
+      .problem-info {
+        flex: 1;
+        min-width: 0;
+
+        .title {
+          font-size: 16px;
+          font-weight: 500;
+          color: #303133;
+          margin-bottom: 8px;
+          transition: color 0.3s ease;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+
+          &:hover {
+            color: #409EFF;
+          }
+        }
+
+        .stats {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+
+          .el-tag {
+            border-radius: 12px;
+            padding: 0 12px;
+            height: 26px;
+            line-height: 26px;
+            font-size: 13px;
+          }
+
+          .submission-count {
+            font-size: 14px;
+            color: #67c23a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            &::before {
+              content: '📈';
+              font-size: 16px;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  &.el-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    
+    :deep(.el-card__header) {
+      padding: 16px;
+      border-bottom: 1px solid #ebeef5;
+      background: linear-gradient(to right, #f8f9fa, #fff);
+
+      .card-header {
+        h3 {
+          position: relative;
+          padding-left: 12px;
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+          
+          &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 16px;
+            background-color: #409EFF;
+            border-radius: 2px;
+          }
         }
       }
     }
 
-    // 前三名特殊样式
-    &:nth-child(1) .rank-number {
-      color: #f56c6c;
-    }
-
-    &:nth-child(2) .rank-number {
-      color: #e6a23c;
-    }
-
-    &:nth-child(3) .rank-number {
-      color: #67c23a;
+    :deep(.el-card__body) {
+      padding: 0;
     }
   }
 }
@@ -1036,21 +1090,36 @@ onMounted(() => {
   }
 
   .hot-problems {
-    .hot-item {
-      padding: 14px 16px;
+    .problem-list {
+      height: 300px;
 
-      .rank-number {
-        font-size: 16px;
-      }
+      .problem-item {
+        padding: 16px;
+        height: 60px;
 
-      .problem-info {
-        .title {
-          font-size: 14px;
+        &::before {
+          font-size: 18px;
+          width: 24px;
+          margin-right: 12px;
         }
 
-        .stats {
-          .completion-rate {
-            font-size: 12px;
+        .problem-info {
+          .title {
+            font-size: 14px;
+          }
+
+          .stats {
+            gap: 10px;
+
+            .el-tag {
+              height: 24px;
+              line-height: 24px;
+              font-size: 12px;
+            }
+
+            .submission-count {
+              font-size: 12px;
+            }
           }
         }
       }

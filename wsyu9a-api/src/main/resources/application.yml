@@ -52,6 +52,7 @@ problem:
   upload:
     readme-path: ${user.dir}/upload/readme  # 使用项目根目录下的 upload/readme 目录 
     attachment-path: ${user.dir}/upload/fujian  # 附件上传路径
+    avatar: ${user.dir}/upload/avatar
 
 # Docker配置
 docker:

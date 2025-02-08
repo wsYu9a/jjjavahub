@@ -211,4 +211,12 @@ export function submitFlag(problemId, flag) {
   }).finally(() => {
     isSubmitting = false
   })
+}
+
+// 获取热门题目
+export function getHotProblems() {
+  return request({
+    url: '/api/problems/user/hot',  // 修改为新的路径
+    method: 'get'
+  })
 } 

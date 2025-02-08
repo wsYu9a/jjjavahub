@@ -61,7 +61,7 @@ public interface UserMapper {
     @Update("UPDATE sys_user SET score = #{score} WHERE id = #{userId}")
     void updateScore(@Param("userId") Long userId, @Param("score") Integer score);
     
-    @Select("SELECT u.username, u.score, " +
+    @Select("SELECT u.username, u.score, u.avatar," +
             "(SELECT COUNT(*) FROM submission s WHERE s.user_id = u.id AND s.correct = true) as solved_count " +
             "FROM sys_user u " +
             "WHERE u.deleted = 0 AND u.enabled = true " +
@@ -123,4 +123,11 @@ public interface UserMapper {
             "    GROUP BY p.category_id\n" +
             ") sub ON pc.id = sub.category_id;")
     List<Map<String, Object>> getCategoryStats(@Param("username") String username);
+
+    /**
+     * 更新用户信息
+     * @param user 用户信息
+     */
+    @Update("UPDATE sys_user SET avatar = #{avatar}, username = #{username}, email = #{email}, role = #{role}, enabled = #{enabled}, deleted = #{deleted}, score = #{score}, update_time = #{updateTime} WHERE id = #{id}")
+    void update(User user);
 } 

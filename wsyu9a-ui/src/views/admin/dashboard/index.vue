@@ -67,7 +67,33 @@
               </el-card>
             </el-col>
 
-    
+    <el-form-item label="头像">
+      <el-upload
+        class="avatar-uploader"
+        action="/api/user/upload/avatar"
+        :show-file-list="false"
+        :on-success="handleAvatarSuccess"
+        :before-upload="beforeAvatarUpload"
+        :headers="{ Authorization: `Bearer ${localStorage.getItem('token')}` }"
+      >
+        <img 
+          v-if="editForm.avatar" 
+          :src="editForm.avatar" 
+          class="avatar" 
+          alt="用户头像" 
+        />
+        <img 
+          v-else 
+          src="https://img2020.cnblogs.com/blog/1993669/202105/1993669-20210523191357495-836628456.png"
+          class="avatar" 
+          alt="默认头像" 
+        />
+        <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+      </el-upload>
+      <div class="upload-tip">
+        支持 jpg 格式，大小不超过 2MB
+      </div>
+    </el-form-item>
   </div>
 </template>
 
@@ -75,7 +101,7 @@
 import { ref, onMounted } from 'vue'
 import { getDashboardStats } from '@/api/admin';
 import { getLatestSolveRecords } from '@/api/solve-records'
-import { User, Document, Folder, Bell } from '@element-plus/icons-vue'
+import { User, Document, Folder, Bell, Plus } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
 const stats = ref({
@@ -88,6 +114,10 @@ const stats = ref({
 const solveDynamics = ref([])
 
 const recentSolves = ref([])
+
+const editForm = ref({
+  avatar: ''
+})
 
 const fetchDashboardStats = async () => {
   try {
@@ -205,5 +235,11 @@ const formatProblemTitle = (title) => {
 .card-header {
   font-size: 18px;
   font-weight: bold;
+}
+
+.avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
 }
 </style> 

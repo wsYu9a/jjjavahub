@@ -19,7 +19,7 @@
             <el-icon><Medal /></el-icon>
             <span class="rank-num">2</span>
           </div>
-          <el-avatar :size="80" :src="rankings[1].avatar" />
+          <el-avatar :size="80" :src="'data:image/jpeg;base64,'+rankings[1].avatar" />
           <h3 class="username">{{ rankings[1].username }}</h3>
           <div class="score">{{ rankings[1].score }} 分</div>
           <div class="solved">解题数：{{ rankings[1].solved }}</div>
@@ -31,7 +31,7 @@
             <el-icon><Trophy /></el-icon>
             <span class="rank-num">1</span>
           </div>
-          <el-avatar :size="100" :src="rankings[0].avatar" />
+          <el-avatar :size="100" :src="'data:image/jpeg;base64,'+rankings[0].avatar" />
           <h3 class="username">{{ rankings[0].username }}</h3>
           <div class="score">{{ rankings[0].score }} 分</div>
           <div class="solved">解题数：{{ rankings[0].solved }}</div>
@@ -43,7 +43,7 @@
             <el-icon><Medal /></el-icon>
             <span class="rank-num">3</span>
           </div>
-          <el-avatar :size="80" :src="rankings[2].avatar" />
+          <el-avatar :size="80" :src="'data:image/jpeg;base64,'+rankings[2].avatar" />
           <h3 class="username">{{ rankings[2].username }}</h3>
           <div class="score">{{ rankings[2].score }} 分</div>
           <div class="solved">解题数：{{ rankings[2].solved }}</div>
@@ -66,7 +66,7 @@
           <el-table-column label="用户" min-width="200">
             <template #default="{ row }">
               <div class="user-info">
-                <el-avatar :size="32" :src="row.avatar || defaultAvatar" />
+                <el-avatar :size="32" :src="'data:image/jpeg;base64,'+row.avatar || defaultAvatar" />
                 <span class="username">{{ row.username }}</span>
               </div>
             </template>
@@ -166,7 +166,7 @@ const refreshRankings = async () => {
       // 转换API返回的数据格式以匹配现有的表格结构
       rankings.value = res.data.map(item => ({
         username: item.username,
-        avatar: defaultAvatar,
+        avatar: item.avatar,
         score: item.score,
         solved: item.solvedCount,
         solvedByDifficulty: {

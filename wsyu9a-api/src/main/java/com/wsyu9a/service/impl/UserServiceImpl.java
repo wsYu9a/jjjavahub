@@ -7,6 +7,7 @@ import com.wsyu9a.mapper.UserMapper;
 import com.wsyu9a.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -24,6 +25,12 @@ import java.util.stream.Collectors;
 import com.wsyu9a.dto.SolveRecordDTO;
 import com.wsyu9a.mapper.SubmissionMapper;
 import java.util.ArrayList;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Slf4j
 @Service
@@ -32,6 +39,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Value("${problem.upload.avatar}")
+    private String avatarPath;
     
     private final JwtUtil jwtUtil;
     private final SubmissionMapper submissionMapper;
@@ -251,5 +261,40 @@ public class UserServiceImpl implements UserService {
             .categoryStats(categoryStats)
             .recentSolves(recentSolves2)
             .build();
+    }
+
+    public String uploadAvatar(MultipartFile file, String jwt) throws IOException {
+        // 检查文件类型和大小
+        if (file.isEmpty() || file.getSize() > 2 * 1024 * 1024) {
+            throw new BusinessException("文件为空或超过2MB");
+        }
+
+        // 将文件转换为 Base64
+        byte[] fileBytes = file.getBytes();
+        String base64Image = Base64.getEncoder().encodeToString(fileBytes);
+
+        // 获取当前用户的 ID
+        String username = getCurrentUserId(jwt); // 使用从 JWT 中获取的用户 ID
+
+        // 更新用户的头像路径
+        User user = userMapper.findByUsername(username);
+        if (user != null) {
+            user.setAvatar(base64Image); // 更新头像为 Base64 数据
+            userMapper.update(user); // 更新用户信息
+        }
+
+        // 返回 Base64 数据
+        return base64Image; // 返回 Base64 数据
+    }
+
+    private String getCurrentUserId(String token) {
+        // 从 JWT 中获取用户 ID
+//        String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTczOTA0MDM4MiwiZXhwIjoxNzM5MTI2NzgyfQ.76MCqmxS1xo7O-g3tGoGeTh7S6ua8vbs9HtUOqjHMfqj2NqHJ1GxgsDwHcKF3vhuzIQ3gGMQJzesjZjdTxbscA"; // 这里需要获取当前请求的 token，通常从 SecurityContext 或 HttpServletRequest 中获取
+        try {
+            // 假设 JwtUtil 有一个方法可以从 token 中获取用户 ID
+            return jwtUtil.getUsernameFromToken(token); // 你需要实现这个方法
+        } catch (Exception e) {
+            throw new BusinessException("获取用户 ID 失败");
+        }
     }
 }

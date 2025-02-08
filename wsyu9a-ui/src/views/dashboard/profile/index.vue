@@ -6,13 +6,15 @@
         <el-col :xs="24" :sm="24" :md="24" :lg="8" :xl="8">
           <el-card class="user-card">
             <div class="user-info">
-              <el-avatar :size="120" :src="userInfo.avatar" />
+              <el-avatar :size="120" :src="'data:image/jpeg;base64,'+userInfo.avatar" />
               <h2 class="username">{{ userInfo.username }}</h2>
               <div class="role">{{ userInfo.role === 'ADMIN' ? '管理员' : '普通用户' }}</div>
               <div class="join-time">你已经加入平台 {{ daysSinceJoin }} 天</div>
               <el-button type="primary" size="large" @click="handleEdit">
                 编辑资料
               </el-button>
+              
+          
             </div>
           </el-card>
         </el-col>
@@ -109,53 +111,10 @@
           </el-table-column>
         </el-table>
       </el-card>
+
+      
     </div>
 
-    <!-- 编辑个人信息对话框 -->
-    <el-dialog
-      v-model="showEditDialog"
-      title="编辑个人信息"
-      width="500px"
-    >
-      <el-form
-        ref="editFormRef"
-        :model="editForm"
-        :rules="editRules"
-        label-width="100px"
-      >
-        <el-form-item label="用户名" prop="username">
-          <el-input 
-            v-model="editForm.username"
-            placeholder="请输入用户名"
-            maxlength="20"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="头像">
-          <el-upload
-            class="avatar-uploader"
-            action="/api/upload"
-            :show-file-list="false"
-            :on-success="handleAvatarSuccess"
-            :before-upload="beforeAvatarUpload"
-          >
-            <img v-if="editForm.avatar" :src="editForm.avatar" class="avatar" />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-          </el-upload>
-          <div class="upload-tip">
-            支持 jpg 格式，大小不超过 2MB
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showEditDialog = false">取消</el-button>
-          <el-button type="primary" @click="handleSaveProfile">
-            保存
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -170,7 +129,8 @@ import {
   Check,
   Upload,
   CaretTop,
-  CaretBottom
+  CaretBottom,
+  Plus
 } from '@element-plus/icons-vue'
 import { getUserStats } from '@/api/user'
 
@@ -211,22 +171,6 @@ const categoryStats = ref([])
 // 最近解题记录
 const recentSolves = ref([])
 
-// 编辑表单
-const showEditDialog = ref(false)
-const editForm = ref({
-  username: '',
-  avatar: ''
-})
-
-const editFormRef = ref(null)
-
-const editRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' },
-    { pattern: /^[a-zA-Z0-9_-]+$/, message: '只能包含字母、数字、下划线和连字符', trigger: 'blur' }
-  ]
-}
 
 // 雷达图相关
 const difficultyChartRef = ref(null)
@@ -341,51 +285,6 @@ const getDifficultyType = (difficulty) => {
   return types[difficulty] || 'info'
 }
 
-// 头像上传
-const handleAvatarSuccess = (res) => {
-  editForm.value.avatar = res.url
-}
-
-const beforeAvatarUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg'
-  const isLt2M = file.size / 1024 / 1024 < 2
-
-  if (!isJPG) {
-    ElMessage.error('头像只能是 JPG 格式!')
-  }
-  if (!isLt2M) {
-    ElMessage.error('头像大小不能超过 2MB!')
-  }
-  return isJPG && isLt2M
-}
-
-// 保存个人信息
-const handleSaveProfile = () => {
-  editFormRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    try {
-      // TODO: 调用API保存个人信息
-      // const res = await updateUserProfile(editForm.value)
-      ElMessage.success('保存成功')
-      showEditDialog.value = false
-      // 更新本地用户信息
-      userInfo.value.username = editForm.value.username
-      if (editForm.value.avatar) {
-        userInfo.value.avatar = editForm.value.avatar
-      }
-    } catch (error) {
-      ElMessage.error('保存失败')
-    }
-  })
-}
-
-// 打开编辑对话框时初始化表单
-const handleEdit = () => {
-  editForm.value.username = userInfo.value.username
-  editForm.value.avatar = userInfo.value.avatar
-  showEditDialog.value = true
-}
 
 const fetchUserStats = async () => {
   try {
@@ -426,6 +325,14 @@ const fetchUserStats = async () => {
     ElMessage.error('获取用户信息失败')
   }
 }
+
+const handleAvatarChange = (file) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file.raw); // 读取文件为 Data URL
+  reader.onload = () => {
+    editForm.value.avatar = reader.result; // 将 Base64 数据存储到 editForm.avatar
+  };
+};
 
 onMounted(() => {
   fetchUserStats()

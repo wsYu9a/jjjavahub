@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -64,6 +65,21 @@ public class UserController {
         } catch (Exception e) {
             log.error("获取用户统计信息失败", e);
             return Result.fail("获取用户统计信息失败");
+        }
+    }
+
+    @PostMapping("/upload/avatar")
+    public Result<String> uploadAvatar(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        // 从请求头中获取JWT
+        String jwt = request.getHeader("Authorization");
+        if (jwt!= null && jwt.startsWith("Bearer ")) {
+            jwt = jwt.substring(7);
+        }
+        try {
+            String filePath = userService.uploadAvatar(file, jwt); // 假设userService的uploadAvatar方法现在接受JWT作为参数
+            return Result.success("上传成功", filePath);
+        } catch (Exception e) {
+            return Result.fail("上传失败：" + e.getMessage());
         }
     }
 } 

@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.wsyu9a.annotation.PreventDuplicateSubmit;
 import com.wsyu9a.common.PageResult;
 import com.wsyu9a.vo.ProblemVO;
+import com.wsyu9a.mapper.ProblemMapper;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -20,6 +22,7 @@ import com.wsyu9a.vo.ProblemVO;
 public class UserProblemController {
 
     private final ProblemService problemService;
+    private final ProblemMapper problemMapper;
     private final Map<String, Long> submitHistory = new ConcurrentHashMap<>();
     private static final long SUBMIT_INTERVAL = 1000; // 1秒内不允许重复提交
 
@@ -85,5 +88,16 @@ public class UserProblemController {
         PageResult<ProblemVO> result = problemService.getUserProblems(
             username, pageNum, pageSize, searchKey, categoryId, difficulty);
         return Result.success(result);
+    }
+
+    @GetMapping("/hot")
+    public Result<List<ProblemVO>> getHotProblems() {
+        try {
+            List<ProblemVO> hotProblems = problemMapper.getHotProblems();
+            return Result.success(hotProblems);
+        } catch (Exception e) {
+            log.error("获取热门题目失败", e);
+            return Result.fail("获取热门题目失败");
+        }
     }
 } 

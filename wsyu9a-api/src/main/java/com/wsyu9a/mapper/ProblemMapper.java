@@ -207,4 +207,13 @@ public interface ProblemMapper {
         @Param("categoryId") Long categoryId,
         @Param("difficulty") String difficulty
     );
+
+    @Select("SELECT p.*, pc.name as category_name, " +
+            "(SELECT COUNT(*) FROM submission s WHERE s.problem_id = p.id) as submit_count " +
+            "FROM problem p " +
+            "LEFT JOIN problem_category pc ON p.category_id = pc.id " +
+            "WHERE p.enabled = true " +
+            "ORDER BY submit_count DESC " +
+            "LIMIT 5")
+    List<ProblemVO> getHotProblems();
 } 

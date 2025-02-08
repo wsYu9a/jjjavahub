@@ -6,6 +6,8 @@ import com.wsyu9a.entity.User;
 import com.wsyu9a.dto.LoginDTO;
 import com.wsyu9a.dto.LoginResponseDTO;
 import com.wsyu9a.dto.UserStatsDTO;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 
 public interface UserService {
     /**
@@ -48,4 +50,11 @@ public interface UserService {
     LoginResponseDTO login(LoginDTO loginDTO);
 
     UserStatsDTO getUserStats(String username);
+
+    /**
+     * 上传用户头像
+     * @param file 上传的文件
+     * @return 文件路径
+     */
+    String uploadAvatar(MultipartFile file,String jwt) throws IOException;
 } 

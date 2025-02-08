@@ -544,7 +544,8 @@ onBeforeUnmount(() => {
 })
 
 const downloadFile = (file) => {
-  ElMessage.success(`开始下载：${file.name}`)
+  
+  ElMessage.success(`开始下载：${file.url}`)
 }
 
 const copyUrl = () => {
