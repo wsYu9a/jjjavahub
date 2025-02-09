@@ -1,0 +1,2 @@
+image: vulhub/fastjson:1.2.24
+port: 8090

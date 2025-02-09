@@ -1,0 +1,2 @@
+image: drupal:8.5.0
+port: 80
