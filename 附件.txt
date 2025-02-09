@@ -1,0 +1,162 @@
+<!-- 页面标题 -->
+  <div class="page-header">
+    <h2 class="page-title">排行榜</h2>
+    <el-button type="primary" @click="refreshRankings">
+      <el-icon><Refresh /></el-icon>
+      刷新
+    </el-button>
+  </div>
+
+  <!-- 排行榜内容 -->
+  <div v-loading="loading" class="leaderboard-content">
+    <!-- 前三名展示 -->
+    <div class="top-three">
+      <!-- 第二名 -->
+      <div v-if="rankings[1]" class="rank-card second">
+        <div class="medal">
+          <el-icon><Medal /></el-icon>
+          <span class="rank-num">2</span>
+        </div>
+        <el-avatar :size="80" :src="'data:image/jpeg;base64,' + (rankings[1].avatar || defaultAvatar)" />
+        <h3 class="username">{{ rankings[1].username }}</h3>
+        <div class="score">{{ rankings[1].score }} 分</div>
+        <div class="solved">解题数：{{ rankings[1].solved }}</div>
+      </div>
+
+      <!-- 第一名 -->
+      <div v-if="rankings[0]" class="rank-card first">
+        <div class="medal">
+          <el-icon><Trophy /></el-icon>
+          <span class="rank-num">1</span>
+        </div>
+        <el-avatar :size="100" :src="'data:image/jpeg;base64,' + (rankings[0].avatar || defaultAvatar)" />
+        <h3 class="username">{{ rankings[0].username }}</h3>
+        <div class="score">{{ rankings[0].score }} 分</div>
+        <div class="solved">解题数：{{ rankings[0].solved }}</div>
+      </div>
+
+      <!-- 第三名 -->
+      <div v-if="rankings[2]" class="rank-card third">
+        <div class="medal">
+          <el-icon><Medal /></el-icon>
+          <span class="rank-num">3</span>
+        </div>
+        <el-avatar :size="80" :src="'data:image/jpeg;base64,' + (rankings[2].avatar || defaultAvatar)" />
+        <h3 class="username">{{ rankings[2].username }}</h3>
+        <div class="score">{{ rankings[2].score }} 分</div>
+        <div class="solved">解题数：{{ rankings[2].solved }}</div>
+      </div>
+    </div>
+
+    <!-- 排行榜表格 -->
+    <el-card class="rank-table">
+      <el-table :data="rankings" stripe>
+        <el-table-column label="排名" width="100" align="center">
+          <template #default="{ $index }">
+            <div class="rank">
+              <el-tag :type="getRankType($index + 1)" effect="dark">
+                {{ $index + 1 }}
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="用户" min-width="200">
+          <template #default="{ row }">
+            <div class="user-info">
+              <el-avatar :size="32" :src="'data:image/jpeg;base64,' + (row.avatar || defaultAvatar)" />
+              <span class="username">{{ row.username }}</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="score" label="分数" width="120" align="center">
+          <template #default="{ row }">
+            <span class="score">{{ row.score }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="解题统计" align="center">
+          <template #default="{ row }">
+            <div class="solve-stats">
+              <el-tooltip content="总解题数">
+                <el-tag type="info" effect="plain">
+                  {{ row.solved }}
+                </el-tag>
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页器 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { getRankingList } from '@/api/ranking'
+import { ElMessage } from 'element-plus'
+
+const rankings = ref([])
+const total = ref(0)
+const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const defaultAvatar = '...' // 默认头像的base64或URL
+
+const fetchRankings = async () => {
+  loading.value = true
+  try {
+    const response = await getRankingList(currentPage.value, pageSize.value)
+    if (response.code === 200) {
+      rankings.value = response.data.records
+      total.value = response.data.total
+    } else {
+      ElMessage.error('获取排行榜失败')
+    }
+  } catch (error) {
+    console.error('获取排行榜失败:', error)
+    ElMessage.error('获取排行榜失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const refreshRankings = () => {
+  fetchRankings()
+}
+
+const handleSizeChange = (val) => {
+  pageSize.value = val
+  fetchRankings()
+}
+
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  fetchRankings()
+}
+
+const getRankType = (rank) => {
+  if (rank === 1) return 'danger'
+  if (rank === 2) return 'warning'
+  if (rank === 3) return 'success'
+  return ''
+}
+
+onMounted(() => {
+  fetchRankings()
+})
+</script>

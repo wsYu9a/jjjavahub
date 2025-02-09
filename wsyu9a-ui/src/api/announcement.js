@@ -49,4 +49,12 @@ export function updateAnnouncement(data) {
     method: 'put',
     data
   })
+}
+
+// 删除公告
+export function deleteAnnouncement(id) {
+  return request({
+    url: `/api/admin/announcement/delete/${id}`,
+    method: 'delete'
+  })
 } 

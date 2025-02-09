@@ -167,4 +167,19 @@ public class AnnouncementServiceImpl implements AnnouncementService {
             throw new BusinessException("获取公告详情失败");
         }
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteAnnouncementById(Long id) {
+        try {
+            int rows = announcementMapper.deleteById(id);
+            if (rows != 1) {
+                throw new BusinessException("删除公告失败");
+            }
+            log.info("公告删除成功: {}", id);
+        } catch (Exception e) {
+            log.error("删除公告失败", e);
+            throw new BusinessException("删除公告失败，请稍后重试");
+        }
+    }
 } 

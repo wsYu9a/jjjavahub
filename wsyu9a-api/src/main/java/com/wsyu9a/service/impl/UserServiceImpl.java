@@ -39,6 +39,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Value("${problem.upload.avatar}")
+    private String avatarPath;
     
     private final JwtUtil jwtUtil;
     private final SubmissionMapper submissionMapper;

@@ -73,4 +73,15 @@ public class AnnouncementController {
             return Result.fail(e.getMessage());
         }
     }
+
+    @DeleteMapping("/delete/{id}")
+    public Result<Void> deleteAnnouncement(@PathVariable Long id) {
+        try {
+            announcementService.deleteAnnouncementById(id);
+            return Result.success("删除成功", null);
+        } catch (Exception e) {
+            log.error("删除公告失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
 } 

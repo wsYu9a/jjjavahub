@@ -58,12 +58,4 @@ public class JwtUtil {
             return false;
         }
     }
-    
-    public Long getUserIdFromToken(String token) {
-        Claims claims = Jwts.parser()
-            .setSigningKey(secret)
-            .parseClaimsJws(token)
-            .getBody();
-        return claims.get("userId", Long.class);
-    }
 } 

@@ -1,8 +1,9 @@
 import request from '@/utils/request'
 
-export function getRankingList() {
+export function getRankingList(pageNum = 1, pageSize = 10) {
   return request({
     url: '/api/ranking',
-    method: 'get'
-  })
+    method: 'get',
+    params: { pageNum, pageSize }
+  });
 } 

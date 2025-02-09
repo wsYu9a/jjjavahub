@@ -60,17 +60,16 @@
             <el-button type="primary" link @click="handlePreview(row)">
               预览
             </el-button>
+            <el-button type="danger" @click.stop="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <div class="pagination-container">
         <el-pagination
-          v-model:current-page="queryParams.pageNum"
-          v-model:page-size="queryParams.pageSize"
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
           :total="total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -153,7 +152,7 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAnnouncementList, addAnnouncement, updateAnnouncement } from '@/api/announcement'
+import { getAnnouncementList, addAnnouncement, updateAnnouncement, deleteAnnouncement, getRankingList } from '@/api/announcement'
 import { formatDateTime } from '@/utils/format'
 
 // 查询参数
@@ -315,6 +314,34 @@ const handleClose = () => {
   }
   submitLoading.value = false
 }
+
+// 删除公告
+const handleDelete = (id) => {
+  ElMessageBox.confirm('确认删除该公告吗？删除后无法恢复！', '提示', {
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await deleteAnnouncement(id)
+      ElMessage.success('删除成功')
+      getList() // 重新获取列表
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  })
+}
+
+const fetchRankingList = async () => {
+  try {
+    const response = await getRankingList(currentPage, pageSize);
+    if (response.code === 200) {
+      rankingList.value = response.data.records;
+      total.value = response.data.total;
+    }
+  } catch (error) {
+    console.error('获取排行榜失败:', error);
+  }
+};
 
 onMounted(() => {
   getList()

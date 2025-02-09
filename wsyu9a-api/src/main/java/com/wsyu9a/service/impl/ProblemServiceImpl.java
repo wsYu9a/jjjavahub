@@ -61,9 +61,6 @@ public class ProblemServiceImpl implements ProblemService {
     @Value("${problem.upload.readme-path}")
     private String readmePath;
 
-    @Value("${problem.upload.attachment-path}")
-    private String fujianPath;
-
     @PostConstruct
     public void init() {
         try {
@@ -435,15 +432,6 @@ public class ProblemServiceImpl implements ProblemService {
         Path filePath = Paths.get(readmePath, newPath);
         if (!Files.exists(filePath)) {
             throw new BusinessException("README文件不存在");
-        }
-        return Files.readString(filePath);
-    }
-
-    public String getFujianContent(String path) throws IOException {
-        String newPath = path.replaceFirst("fujian/", "");
-        Path filePath = Paths.get(fujianPath, newPath);
-        if (!Files.exists(filePath)) {
-            throw new BusinessException("附件不存在");
         }
         return Files.readString(filePath);
     }

@@ -57,4 +57,11 @@ public interface AnnouncementService {
      * @return 公告详情
      */
     Announcement getPublicAnnouncementById(Long id);
+
+    /**
+     * 删除公告
+     *
+     * @param id 公告ID
+     */
+    void deleteAnnouncementById(Long id);
 } 

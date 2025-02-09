@@ -78,4 +78,7 @@ public interface AnnouncementMapper {
             "LEFT JOIN sys_user u ON a.publisher_id = u.id " +
             "WHERE a.id = #{id} AND a.enabled = true")
     Announcement findPublicById(@Param("id") Long id);
+    
+    @Delete("DELETE FROM announcement WHERE id = #{id}")
+    int deleteById(@Param("id") Long id);
 } 
