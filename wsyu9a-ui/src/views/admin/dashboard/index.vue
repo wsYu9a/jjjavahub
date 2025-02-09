@@ -86,7 +86,7 @@
               <div class="solve-stats">
                 <el-tooltip content="总解题数">
                   <el-tag type="info" effect="plain">
-                    {{ row.solved }}
+                    {{ row.solvedCount }}
                   </el-tag>
                 </el-tooltip>
               </div>
@@ -113,7 +113,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getDashboardStats, getRankingList } from '@/api/admin';
+import { getRankingList } from '@/api/ranking'
+import { getDashboardStats } from '@/api/admin';
 import { User, Document, Folder, Bell, Medal, Trophy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 

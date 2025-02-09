@@ -152,7 +152,7 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAnnouncementList, addAnnouncement, updateAnnouncement, deleteAnnouncement, getRankingList } from '@/api/announcement'
+import { getAnnouncementList, addAnnouncement, updateAnnouncement, deleteAnnouncement } from '@/api/announcement'
 import { formatDateTime } from '@/utils/format'
 
 // 查询参数
@@ -331,17 +331,6 @@ const handleDelete = (id) => {
   })
 }
 
-const fetchRankingList = async () => {
-  try {
-    const response = await getRankingList(currentPage, pageSize);
-    if (response.code === 200) {
-      rankingList.value = response.data.records;
-      total.value = response.data.total;
-    }
-  } catch (error) {
-    console.error('获取排行榜失败:', error);
-  }
-};
 
 onMounted(() => {
   getList()
